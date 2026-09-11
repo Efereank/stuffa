@@ -31,6 +31,10 @@ interface ApiError {
   error: string;
 }
 
+/** Horario permitido para reservar (formato HH:MM) */
+const MIN_TIME = '22:00';
+const MAX_TIME = '23:00';
+
 export default function BookingForm({
   table,
   date,
@@ -49,10 +53,7 @@ export default function BookingForm({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 🛡️ Honeypot: campo oculto que los bots rellenan pero los humanos no
   const [website, setWebsite] = useState('');
-
-  // 🛡️ Time-trap: momento en que se abrió el formulario
   const startedAtRef = useRef<number>(Date.now());
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
@@ -78,6 +79,12 @@ export default function BookingForm({
       return;
     }
 
+    // 🕐 Validación de horario
+    if (form.time < MIN_TIME || form.time > MAX_TIME) {
+      setError(`El horario de reserva es de 10:00 PM a 11:00 PM.`);
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -93,7 +100,6 @@ export default function BookingForm({
           time: form.time,
           notes: form.notes,
           privacyAccepted: true,
-          // 🛡️ Antispam
           website,
           startedAt: startedAtRef.current,
         }),
@@ -108,7 +114,6 @@ export default function BookingForm({
         return;
       }
 
-      // Redirige al ticket
       router.push(`/reserva/${data.qr_token}`);
     } catch {
       setError('No se pudo conectar. Revisa tu internet e intenta de nuevo.');
@@ -138,7 +143,7 @@ export default function BookingForm({
         </div>
       </div>
 
-      {/* 🛡️ Honeypot — invisible para humanos */}
+      {/* 🛡️ Honeypot */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute -left-[9999px] h-0 w-0 overflow-hidden opacity-0"
@@ -211,10 +216,19 @@ export default function BookingForm({
           <input
             required
             type="time"
+            min={MIN_TIME}
+            max={MAX_TIME}
             value={form.time}
             onChange={(e) => update('time', e.target.value)}
+            onBlur={() => {
+              if (form.time < MIN_TIME) update('time', MIN_TIME);
+              if (form.time > MAX_TIME) update('time', MAX_TIME);
+            }}
             className={inputClass}
           />
+          <span className="mt-1 block text-[11px] text-white/40">
+            Entre 10:00 PM y 11:00 PM
+          </span>
         </Field>
 
         <div className="sm:col-span-2">
@@ -286,7 +300,8 @@ export default function BookingForm({
 const inputClass =
   'w-full min-h-[48px] rounded-xl border border-red-950/60 bg-black/40 px-4 py-3 text-sm text-white ' +
   'placeholder:text-white/30 outline-none transition ' +
-  'focus:border-red-500/70 focus:bg-black/60 focus:ring-2 focus:ring-red-500/30';
+  'focus:border-red-500/70 focus:bg-black/60 focus:ring-2 focus:ring-red-500/30 ' +
+  '[color-scheme:dark]';
 
 function Field({
   label,

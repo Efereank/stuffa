@@ -93,6 +93,7 @@ export function firstWeekdayOfMonth(year: number, month: number) {
 export const RPC_ERRORS: Record<string, string> = {
   INVALID_NAME: 'Ingresa un nombre válido (mínimo 3 caracteres).',
   INVALID_PHONE: 'Ingresa un teléfono válido.',
+  INVALID_TIME: 'El horario de reserva es de 10:00 PM a 11:00 PM.',
   DATE_IN_PAST: 'La fecha seleccionada ya pasó.',
   CLOSED_DAY: 'Stuffa no abre ese día. Elige una fecha disponible.',
   TABLE_NOT_FOUND: 'La mesa ya no está disponible.',
