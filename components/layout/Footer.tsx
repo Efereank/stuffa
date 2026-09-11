@@ -9,11 +9,8 @@ export default function Footer() {
           {/* Logo + Tagline */}
           <div className="sm:col-span-2 lg:col-span-1">
 <div
-  className="relative h-12 w-40"
-  style={{
-    colorScheme: 'only light',
-    isolation: 'isolate',
-  }}
+  className="stuffa-protected relative h-12 w-40"
+  style={{ colorScheme: 'only light', isolation: 'isolate' }}
 >
   <Image
     src="/stuffa-logo.png"
@@ -21,7 +18,6 @@ export default function Footer() {
     fill
     sizes="160px"
     className="object-contain object-left"
-    style={{ colorScheme: 'only light' }}
   />
 </div>
             <p className="mt-3 max-w-xs text-xs leading-relaxed text-white/50">

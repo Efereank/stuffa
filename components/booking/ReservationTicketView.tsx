@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { QRCodeSVG } from 'qrcode.react';
+import { QRCodeCanvas } from 'qrcode.react';
 import { createClient } from '@/lib/supabase/client';
 import { cn, formatCurrency, formatLongDate, formatTime } from '@/lib/utils';
 import type { ReservationTicket } from '@/lib/types';
@@ -95,27 +95,29 @@ export default function ReservationTicketView({
 
         {reservation.status !== 'cancelled' && (
           <div className="flex flex-col items-center gap-4 border-b border-dashed border-red-950/60 bg-red-950/5 px-5 py-7 sm:px-6 sm:py-8">
-<div
-  className="w-full max-w-[230px] rounded-2xl bg-white p-4 shadow-lg shadow-red-950/40"
-  style={{
-    // 🛡️ Evita que el Auto Dark Mode del navegador invierta el QR
-    colorScheme: 'only light',
-    // 🛡️ Aísla esta zona del filtro de inversión de colores
-    isolation: 'isolate',
-  }}
->
-  <QRCodeSVG
-    value={qrValue}
-    size={256}
-    level="M"
-    marginSize={0}
-    bgColor="#FFFFFF"
-    fgColor="#000000"
-    className="h-auto w-full"
-    // 🛡️ Fuerza colores exactos en el SVG (defensa en profundidad)
-    style={{ colorScheme: 'only light' }}
-  />
-</div>
+            {/* 🛡️ QR BLINDADO contra Force Dark Mode / Auto Dark Mode */}
+            <div
+              className="stuffa-protected w-full max-w-[230px] rounded-2xl bg-white p-4 shadow-lg shadow-red-950/40"
+              style={{
+                colorScheme: 'only light',
+                isolation: 'isolate',
+                forcedColorAdjust: 'none',
+              }}
+            >
+              <QRCodeCanvas
+                value={qrValue}
+                size={256}
+                level="M"
+                marginSize={0}
+                bgColor="#FFFFFF"
+                fgColor="#000000"
+                className="h-auto w-full"
+                style={{
+                  colorScheme: 'only light',
+                  display: 'block',
+                }}
+              />
+            </div>
             <p className="text-center text-xs text-white/50">
               Muestra este código QR en la entrada
             </p>
