@@ -36,12 +36,7 @@ const STATUS_META: Record<
   },
 };
 
-/**
- * Extrae el token de reserva de un QR que puede contener:
- * - Una URL: https://dominio.com/reserva/{uuid}
- * - Un UUID pelado: abc-123-def-456
- * - Un código de reserva: STF-XXXXXX
- */
+/** Extrae token y tipo de campo del QR */
 function extractToken(raw: string): {
   value: string;
   field: 'qr_token' | 'code' | 'unknown';
@@ -49,7 +44,6 @@ function extractToken(raw: string): {
   const trimmed = raw.trim();
   if (!trimmed) return { value: '', field: 'unknown' };
 
-  // 1. URL con /reserva/{uuid}
   const reservaMatch = trimmed.match(
     /reserva\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i,
   );
@@ -57,7 +51,6 @@ function extractToken(raw: string): {
     return { value: reservaMatch[1], field: 'qr_token' };
   }
 
-  // 2. Cualquier UUID en el string
   const uuidMatch = trimmed.match(
     /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i,
   );
@@ -65,13 +58,11 @@ function extractToken(raw: string): {
     return { value: uuidMatch[0], field: 'qr_token' };
   }
 
-  // 3. Código de reserva STF-XXXXXX
   const codeMatch = trimmed.match(/STF-[A-Z0-9]{6}/i);
   if (codeMatch) {
     return { value: codeMatch[0].toUpperCase(), field: 'code' };
   }
 
-  // 4. Fallback: devolvemos el raw por si acaso
   return { value: trimmed, field: 'unknown' };
 }
 
@@ -133,44 +124,68 @@ export default function AdminDashboard({
 
   const handleScan = useCallback(
     async (rawValue: string): Promise<string> => {
-      // 🔍 LOG DE DIAGNÓSTICO — Abre F12 → Console para verlo
       console.log('[Scanner] QR detectado:', rawValue);
 
       const { value, field } = extractToken(rawValue);
-
       console.log('[Scanner] Extraído:', { value, field });
 
       if (!value || field === 'unknown') {
         return '❌ QR inválido o no reconocido.';
       }
 
-      // Actualizamos según el campo encontrado
-      const updateData = {
-        status: 'checked_in' as const,
-        checked_in_at: new Date().toISOString(),
-      };
-
-      const query = supabaseRef.current
-        .from('reservations')
-        .update(updateData)
-        .eq(field, value)
-        .select('code, customer_name')
-        .maybeSingle<{ code: string; customer_name: string }>();
-
-      const { data, error } = await query;
+      // Llamar a la RPC nueva que maneja el ciclo completo
+      const { data, error } = await supabaseRef.current
+        .rpc('check_in_reservation', {
+          p_token: field === 'qr_token' ? value : null,
+          p_code: field === 'code' ? value : null,
+        })
+        .single<{
+          status: string;
+          code: string;
+          customer_name: string;
+          table_code: string;
+          checked_in_at?: string;
+        }>();
 
       if (error) {
-        console.error('[Scanner] Error de Supabase:', error);
+        console.error('[Scanner] Error RPC:', error);
         return `❌ ${error.message}`;
       }
 
       if (!data) {
-        console.warn('[Scanner] Sin resultados para:', { field, value });
         return '❌ No existe una reserva con este código.';
       }
 
       void refresh();
-      return `✅ ${data.customer_name} — ${data.code}`;
+
+      // Mensajes según el estado devuelto
+      switch (data.status) {
+        case 'ok':
+          return `✅ ${data.customer_name} — ${data.code}`;
+
+        case 'already_checked_in': {
+          const hora = data.checked_in_at
+            ? new Date(data.checked_in_at).toLocaleTimeString('es-VE', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false,
+              })
+            : '—';
+          return `⚠️ Ya escaneado a las ${hora} — ${data.customer_name}`;
+        }
+
+        case 'cancelled':
+          return `❌ Reserva cancelada — ${data.customer_name}`;
+
+        case 'no_show':
+          return `❌ Marcada como no-show — ${data.customer_name}`;
+
+        case 'not_found':
+          return '❌ No existe una reserva con este código.';
+
+        default:
+          return '❌ Estado inesperado.';
+      }
     },
     [refresh],
   );

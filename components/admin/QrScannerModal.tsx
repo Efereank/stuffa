@@ -29,7 +29,6 @@ export default function QrScannerModal({
     }
   }, [open]);
 
-  // Bloquea scroll del body mientras el modal está abierto
   useEffect(() => {
     if (!open) return;
     const prev = document.body.style.overflow;
@@ -49,22 +48,29 @@ export default function QrScannerModal({
     const message = await onToken(value);
     setFeedback(message);
 
+    // Si fue escaneo exitoso o ya escaneado → pausa más larga
+    // para que el admin pueda leer el mensaje
+    const isImportant =
+      message.startsWith('✅') || message.startsWith('⚠️');
+    const cooldown = isImportant ? 3000 : 2000;
+
     cooldownRef.current = window.setTimeout(() => {
       setPaused(false);
       setProcessing(false);
       setFeedback(null);
-    }, 2500);
+    }, cooldown);
   }
 
   if (!open) return null;
 
+  const isSuccess = feedback?.startsWith('✅');
+  const isWarning = feedback?.startsWith('⚠️');
   const isError = feedback?.startsWith('❌');
 
   return (
     <div className="fixed inset-0 z-50 flex bg-black/80 backdrop-blur-sm animate-fade-in sm:items-center sm:justify-center sm:p-4">
-      <div className="flex h-full w-full flex-col bg-neutral-900 sm:h-auto sm:max-w-md sm:rounded-3xl sm:border sm:border-white/15 sm:shadow-2xl">
-        {/* Header */}
-        <div className="safe-top flex items-center justify-between border-b border-white/10 px-5 py-4">
+      <div className="flex h-full w-full flex-col bg-neutral-950 sm:h-auto sm:max-w-md sm:rounded-3xl sm:border sm:border-red-950/60 sm:shadow-2xl">
+        <div className="safe-top flex items-center justify-between border-b border-red-950/60 px-5 py-4">
           <h2 className="text-base font-bold text-white sm:text-lg">
             Escanear QR
           </h2>
@@ -78,7 +84,6 @@ export default function QrScannerModal({
           </button>
         </div>
 
-        {/* Cámara */}
         <div className="relative flex-1 bg-black sm:aspect-square sm:flex-none">
           <Scanner
             onScan={handleScan}
@@ -90,14 +95,22 @@ export default function QrScannerModal({
               video: { objectFit: 'cover' },
             }}
           />
+
+          {/* Overlay cuando está pausado/processing */}
+          {paused && !feedback && (
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/40">
+              <span className="h-10 w-10 animate-spin rounded-full border-4 border-red-500 border-t-transparent" />
+            </div>
+          )}
         </div>
 
-        {/* Feedback */}
         <div
           className={cn(
-            'safe-bottom px-5 py-4 text-center text-sm font-semibold',
+            'safe-bottom px-5 py-4 text-center text-sm font-semibold transition',
             !feedback && 'text-white/50',
-            feedback && (isError ? 'text-red-300' : 'text-emerald-300'),
+            isSuccess && 'bg-emerald-500/10 text-emerald-300',
+            isWarning && 'bg-amber-500/10 text-amber-300',
+            isError && 'bg-red-500/10 text-red-300',
           )}
           aria-live="polite"
         >
