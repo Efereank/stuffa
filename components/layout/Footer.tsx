@@ -8,15 +8,22 @@ export default function Footer() {
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           {/* Logo + Tagline */}
           <div className="sm:col-span-2 lg:col-span-1">
-            <div className="relative h-12 w-40">
-              <Image
-                src="/stuffa-logo.png"
-                alt="Stuffa Disco & Lounge"
-                fill
-                sizes="160px"
-                className="object-contain object-left"
-              />
-            </div>
+<div
+  className="relative h-12 w-40"
+  style={{
+    colorScheme: 'only light',
+    isolation: 'isolate',
+  }}
+>
+  <Image
+    src="/stuffa-logo.png"
+    alt="Stuffa Disco & Lounge"
+    fill
+    sizes="160px"
+    className="object-contain object-left"
+    style={{ colorScheme: 'only light' }}
+  />
+</div>
             <p className="mt-3 max-w-xs text-xs leading-relaxed text-white/50">
               Somos los dueños de la rumba los fines de semana. Reserva tu mesa
               y vive la experiencia Stuffa.
@@ -34,7 +41,7 @@ export default function Footer() {
                 <span>Viernes y Sábados</span>
               </li>
               <li className="flex items-center gap-2">
-                <span className="text-base">🕙</span>
+                <span className="text-base"></span>
                 <span>10:00 PM – 4:00 AM</span>
               </li>
               <li className="mt-2 text-[11px] text-red-400">
@@ -67,7 +74,7 @@ export default function Footer() {
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 transition hover:text-white"
                 >
-                  <span className="text-base">📸</span>
+                  <span className="text-base"></span>
                   <span>@stuffalounge</span>
                 </a>
               </li>
