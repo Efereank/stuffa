@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/server';
 import BookingFlow from '@/components/booking/BookingFlow';
+import Footer from '@/components/layout/Footer';                   
 import { todayISO } from '@/lib/utils';
 import type { MapTable, OpenDate } from '@/lib/types';
 
@@ -22,8 +23,6 @@ export default async function HomePage({
     .rpc('get_open_dates', { p_from: today, p_to: to })
     .returns<OpenDate[]>();
 
-  // Supabase may return an error-like object instead of an array in some cases.
-  // Normalize to an array so the UI always receives string[]
   const availableDates: string[] = Array.isArray(openDates)
     ? openDates.map((o) => o.date)
     : [];
@@ -37,15 +36,12 @@ export default async function HomePage({
     .rpc('get_tables_for_date', { p_date: selectedDate })
     .returns<MapTable[]>();
 
-  // Supabase may return an error-like object instead of an array in some cases.
-  // Normalize to an array so the UI always receives MapTable[]
   const tablesArray: MapTable[] = Array.isArray(tables) ? tables : [];
 
   return (
     <main className="min-h-screen">
-      <div className="mx-auto w-full max-w-6xl px-4 pb-16 pt-6 sm:px-6 sm:pt-10 lg:px-8">
+      <div className="mx-auto w-full max-w-6xl px-4 pb-8 pt-6 sm:px-6 sm:pt-10 lg:px-8">
         <header className="mb-6 flex flex-col items-start gap-4 sm:mb-10">
-          {/* Logo */}
           <div className="relative h-16 w-56 sm:h-20 sm:w-72">
             <Image
               src="/stuffa-logo.png"
@@ -68,7 +64,7 @@ export default async function HomePage({
               </span>
             </h1>
             <p className="mt-2 max-w-xl text-xs text-white/60 sm:text-sm">
-             Somos los dueños de la rumba los fines de semana.
+              Somos los dueños de la rumba los fines de semana.
               Selecciona la mesa que prefieras.
             </p>
           </div>
@@ -80,6 +76,8 @@ export default async function HomePage({
           availableDates={availableDates}
         />
       </div>
+
+      <Footer />                                                    {/* 👈 AÑADIDO */}
     </main>
   );
 }

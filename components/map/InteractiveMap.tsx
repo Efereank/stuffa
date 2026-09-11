@@ -17,9 +17,7 @@ interface InteractiveMapProps {
   floorPlanSrc?: string;
   isLoading?: boolean;
   className?: string;
-  /** Capacidad mínima del grupo. Mesas más pequeñas se bloquean. */
   minCapacity?: number;
-  /** Capacidad máxima permitida. Mesas más grandes se bloquean (opcional). */
   maxCapacity?: number;
 }
 
@@ -45,10 +43,11 @@ const LEGEND: { state: TableVisualState; label: string; dot: string }[] = [
   { state: 'selected',  label: 'Tu selección',    dot: 'bg-yellow-400' },
 ];
 
-/** Ratio exacto de la imagen del plano */
 const FLOOR_PLAN_RATIO = '1263 / 839';
 
-/** Clases que la librería debe IGNORAR (deja pasar el tap nativo) */
+/** Ancho mínimo del mapa en móvil para que las mesas no se solapen */
+const MOBILE_MIN_WIDTH = 900;
+
 const EXCLUDED_CLASSES = ['rzpp-ignore', 'rzpp-control'];
 
 export default function InteractiveMap({
@@ -99,7 +98,7 @@ export default function InteractiveMap({
         {isMobile && (
           <div className="flex items-center justify-between gap-2 border-b border-red-950/60 bg-black/80 px-3 py-2">
             <span className="text-[11px] text-white/60">
-              Pellizca para zoom · Toca una mesa roja para reservar
+              ← Desliza para ver todo el plano →
             </span>
             <button
               type="button"
@@ -112,24 +111,38 @@ export default function InteractiveMap({
           </div>
         )}
 
-        <MapCanvas
-          tables={tables}
-          selectedTableId={selectedTableId}
-          onSelectTable={onSelectTable}
-          floorPlanSrc={floorPlanSrc}
-          isLoading={isLoading}
-          minCapacity={minCapacity}
-          maxCapacity={maxCapacity}
-        />
+        {/* Modo normal: en móvil scroll horizontal, en desktop zoom */}
+        {isMobile ? (
+          <ScrollableCanvas
+            tables={tables}
+            selectedTableId={selectedTableId}
+            onSelectTable={onSelectTable}
+            floorPlanSrc={floorPlanSrc}
+            isLoading={isLoading}
+            minCapacity={minCapacity}
+            maxCapacity={maxCapacity}
+          />
+        ) : (
+          <ZoomCanvas
+            tables={tables}
+            selectedTableId={selectedTableId}
+            onSelectTable={onSelectTable}
+            floorPlanSrc={floorPlanSrc}
+            isLoading={isLoading}
+            minCapacity={minCapacity}
+            maxCapacity={maxCapacity}
+          />
+        )}
 
         <Legend />
       </div>
 
+      {/* Modo pantalla completa — siempre con zoom */}
       {fullscreen && (
         <div className="fixed inset-0 z-50 flex flex-col bg-black animate-fade-in">
           <div className="safe-top flex items-center justify-between border-b border-red-950/60 bg-black px-3 py-3">
             <span className="text-xs font-semibold text-white/80">
-              Pellizca para zoom · Toca una mesa roja para seleccionar
+              Pellizca para zoom · Toca una mesa roja
             </span>
             <button
               type="button"
@@ -142,7 +155,7 @@ export default function InteractiveMap({
           </div>
 
           <div className="flex-1 overflow-hidden">
-            <MapCanvas
+            <ZoomCanvas
               tables={tables}
               selectedTableId={selectedTableId}
               onSelectTable={(t) => {
@@ -164,10 +177,10 @@ export default function InteractiveMap({
 }
 
 /* ============================================================
- * SUB-COMPONENTES
+ * CANVAS CON SCROLL HORIZONTAL (móvil sin fullscreen)
  * ============================================================ */
 
-interface MapCanvasProps {
+interface CanvasProps {
   tables: MapTable[];
   selectedTableId: string | null;
   onSelectTable: (table: MapTable) => void;
@@ -177,7 +190,7 @@ interface MapCanvasProps {
   maxCapacity?: number;
 }
 
-function MapCanvas({
+function ScrollableCanvas({
   tables,
   selectedTableId,
   onSelectTable,
@@ -185,7 +198,62 @@ function MapCanvas({
   isLoading,
   minCapacity,
   maxCapacity,
-}: MapCanvasProps) {
+}: CanvasProps) {
+  return (
+    <div className="overflow-x-auto no-scrollbar">
+      <div
+        className="relative select-none"
+        style={{
+          minWidth: `${MOBILE_MIN_WIDTH}px`,
+          aspectRatio: FLOOR_PLAN_RATIO,
+        }}
+      >
+        <Image
+          src={floorPlanSrc}
+          alt="Plano del local Stuffa Disco & Lounge"
+          fill
+          priority
+          sizes="900px"
+          className="pointer-events-none select-none object-cover"
+        />
+
+        {tables.map((table) => (
+          <TableButton
+            key={table.id}
+            table={table}
+            selectedTableId={selectedTableId}
+            onSelectTable={onSelectTable}
+            minCapacity={minCapacity}
+            maxCapacity={maxCapacity}
+          />
+        ))}
+
+        {isLoading && (
+          <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+            <div className="flex items-center gap-3 text-xs text-white/80 sm:text-sm">
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-red-500 border-t-transparent" />
+              Actualizando disponibilidad…
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+ * CANVAS CON ZOOM (desktop y fullscreen)
+ * ============================================================ */
+
+function ZoomCanvas({
+  tables,
+  selectedTableId,
+  onSelectTable,
+  floorPlanSrc,
+  isLoading,
+  minCapacity,
+  maxCapacity,
+}: CanvasProps) {
   const transformRef = useRef<ReactZoomPanPinchRef | null>(null);
   const [scale, setScale] = useState(1);
 
@@ -234,77 +302,16 @@ function MapCanvas({
                   className="pointer-events-none select-none object-cover"
                 />
 
-                {tables.map((table) => {
-                  const isSelected = table.id === selectedTableId;
-                  const tooSmall = table.capacity < minCapacity;
-                  const tooBig =
-                    maxCapacity !== undefined && table.capacity > maxCapacity;
-                  const outOfRange = tooSmall || tooBig;
-
-                  const visualState: TableVisualState = isSelected
-                    ? 'selected'
-                    : outOfRange
-                      ? 'blocked'
-                      : table.is_available
-                        ? 'available'
-                        : 'occupied';
-
-                  const interactive =
-                    (table.is_available && !outOfRange) || isSelected;
-
-                  return (
-                    <button
-                      key={table.id}
-                      type="button"
-                      disabled={!interactive}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onSelectTable(table);
-                      }}
-                      aria-label={`${table.code}, zona ${table.zone_name}, capacidad ${table.capacity} personas, ${
-                        !table.is_available
-                          ? 'reservada'
-                          : tooSmall
-                            ? 'muy pequeña para tu grupo'
-                            : tooBig
-                              ? 'muy grande para tu grupo'
-                              : 'disponible'
-                      }`}
-                      aria-pressed={isSelected}
-                      title={
-                        tooSmall
-                          ? `${table.code} · solo ${table.capacity} pers. (tu grupo es de ${minCapacity})`
-                          : tooBig
-                            ? `${table.code} · ${table.capacity} pers. (tu grupo es de ${minCapacity})`
-                            : `${table.code} · ${table.zone_name} · ${table.capacity} pers.`
-                      }
-                      style={{
-                        left: `${table.pos_x}%`,
-                        top: `${table.pos_y}%`,
-                        width: `${table.width}%`,
-                        aspectRatio: `${table.width} / ${table.height}`,
-                        transform: `translate(-50%, -50%) rotate(${table.rotation}deg)`,
-                        minWidth: '36px',
-                        minHeight: '36px',
-                        touchAction: 'manipulation',
-                        WebkitTapHighlightColor: 'transparent',
-                      }}
-                      className={cn(
-                        'rzpp-ignore',
-                        'absolute flex items-center justify-center border-2',
-                        'text-[10px] font-bold uppercase tracking-tight sm:text-[11px]',
-                        'transition-[background-color,border-color,box-shadow,transform] duration-200 outline-none',
-                        'focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-1 focus-visible:ring-offset-black',
-                        table.shape === 'circle' ? 'rounded-full' : 'rounded-md',
-                        STATE_STYLES[visualState],
-                      )}
-                    >
-                      <span className="pointer-events-none px-0.5 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
-                        {table.code}
-                      </span>
-                    </button>
-                  );
-                })}
+                {tables.map((table) => (
+                  <TableButton
+                    key={table.id}
+                    table={table}
+                    selectedTableId={selectedTableId}
+                    onSelectTable={onSelectTable}
+                    minCapacity={minCapacity}
+                    maxCapacity={maxCapacity}
+                  />
+                ))}
 
                 {isLoading && (
                   <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/80 backdrop-blur-sm">
@@ -361,6 +368,95 @@ function MapCanvas({
     </div>
   );
 }
+
+/* ============================================================
+ * BOTÓN DE MESA — compartido entre ambos canvas
+ * ============================================================ */
+
+function TableButton({
+  table,
+  selectedTableId,
+  onSelectTable,
+  minCapacity,
+  maxCapacity,
+}: {
+  table: MapTable;
+  selectedTableId: string | null;
+  onSelectTable: (table: MapTable) => void;
+  minCapacity: number;
+  maxCapacity?: number;
+}) {
+  const isSelected = table.id === selectedTableId;
+  const tooSmall = table.capacity < minCapacity;
+  const tooBig = maxCapacity !== undefined && table.capacity > maxCapacity;
+  const outOfRange = tooSmall || tooBig;
+
+  const visualState: TableVisualState = isSelected
+    ? 'selected'
+    : outOfRange
+      ? 'blocked'
+      : table.is_available
+        ? 'available'
+        : 'occupied';
+
+  const interactive = (table.is_available && !outOfRange) || isSelected;
+
+  return (
+    <button
+      type="button"
+      disabled={!interactive}
+      onClick={(e) => {
+        e.stopPropagation();
+        onSelectTable(table);
+      }}
+      aria-label={`${table.code}, zona ${table.zone_name}, capacidad ${table.capacity} personas, ${
+        !table.is_available
+          ? 'reservada'
+          : tooSmall
+            ? 'muy pequeña para tu grupo'
+            : tooBig
+              ? 'muy grande para tu grupo'
+              : 'disponible'
+      }`}
+      aria-pressed={isSelected}
+      title={
+        tooSmall
+          ? `${table.code} · solo ${table.capacity} pers. (tu grupo es de ${minCapacity})`
+          : tooBig
+            ? `${table.code} · ${table.capacity} pers. (tu grupo es de ${minCapacity})`
+            : `${table.code} · ${table.zone_name} · ${table.capacity} pers.`
+      }
+      style={{
+        left: `${table.pos_x}%`,
+        top: `${table.pos_y}%`,
+        width: `${table.width}%`,
+        aspectRatio: `${table.width} / ${table.height}`,
+        transform: `translate(-50%, -50%) rotate(${table.rotation}deg)`,
+        minWidth: '36px',
+        minHeight: '36px',
+        touchAction: 'manipulation',
+        WebkitTapHighlightColor: 'transparent',
+      }}
+      className={cn(
+        'rzpp-ignore',
+        'absolute flex items-center justify-center border-2',
+        'text-[10px] font-bold uppercase tracking-tight sm:text-[11px]',
+        'transition-[background-color,border-color,box-shadow,transform] duration-200 outline-none',
+        'focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-1 focus-visible:ring-offset-black',
+        table.shape === 'circle' ? 'rounded-full' : 'rounded-md',
+        STATE_STYLES[visualState],
+      )}
+    >
+      <span className="pointer-events-none px-0.5 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+        {table.code}
+      </span>
+    </button>
+  );
+}
+
+/* ============================================================
+ * UTILIDADES
+ * ============================================================ */
 
 function ZoomButton({
   onClick,
