@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { QRCodeCanvas } from 'qrcode.react';
+import { QRCodeSVG } from 'qrcode.react';
 import { createClient } from '@/lib/supabase/client';
 import { cn, formatCurrency, formatLongDate, formatTime } from '@/lib/utils';
 import type { ReservationTicket } from '@/lib/types';
@@ -95,16 +95,9 @@ export default function ReservationTicketView({
 
         {reservation.status !== 'cancelled' && (
           <div className="flex flex-col items-center gap-4 border-b border-dashed border-red-950/60 bg-red-950/5 px-5 py-7 sm:px-6 sm:py-8">
-            {/* 🛡️ QR BLINDADO contra Force Dark Mode / Auto Dark Mode */}
-            <div
-              className="stuffa-protected w-full max-w-[230px] rounded-2xl bg-white p-4 shadow-lg shadow-red-950/40"
-              style={{
-                colorScheme: 'only light',
-                isolation: 'isolate',
-                forcedColorAdjust: 'none',
-              }}
-            >
-              <QRCodeCanvas
+            {/* QR — versión simple que funciona bien en Chrome, Safari y Firefox */}
+            <div className="w-full max-w-[230px] rounded-2xl bg-white p-4 shadow-lg shadow-red-950/40">
+              <QRCodeSVG
                 value={qrValue}
                 size={256}
                 level="M"
@@ -112,15 +105,23 @@ export default function ReservationTicketView({
                 bgColor="#FFFFFF"
                 fgColor="#000000"
                 className="h-auto w-full"
-                style={{
-                  colorScheme: 'only light',
-                  display: 'block',
-                }}
               />
             </div>
+
             <p className="text-center text-xs text-white/50">
               Muestra este código QR en la entrada
             </p>
+
+            {/* ⚠️ Aviso para navegadores con modo oscuro forzado (Samsung Browser) */}
+            <div className="mt-1 w-full max-w-[280px] rounded-xl border border-yellow-900/40 bg-yellow-950/20 px-3 py-2.5">
+              <p className="text-center text-[11px] leading-relaxed text-yellow-300/90">
+                <span className="font-bold">💡 ¿El código se ve gris o borroso?</span>
+                <br />
+                Cambia tu navegador a{' '}
+                <span className="font-bold text-white">modo claro</span> para verlo
+                correctamente.
+              </p>
+            </div>
           </div>
         )}
 

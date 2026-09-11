@@ -59,33 +59,3 @@ body {
 }
 
 
-/* ============================================================
-   PROTECCIÓN CONTRA AUTO DARK MODE / FORCE DARK / THEMES DE SO
-   ============================================================ */
-
-.stuffa-protected,
-.stuffa-protected img,
-.stuffa-protected svg,
-.stuffa-protected canvas {
-  /* Fuerza a que el navegador no aplique el algoritmo de oscurecimiento */
-  forced-color-adjust: none;
-  -webkit-forced-color-adjust: none;
-  
-  /* Bloquea cualquier filtro de inversión */
-  filter: none !important;
-  -webkit-filter: none !important;
-  mix-blend-mode: normal !important;
-  opacity: 1 !important;
-  
-  /* Aísla del contexto de color del padre */
-  isolation: isolate;
-  color-scheme: only light;
-}
-
-/* Protección específica para Next.js Image */
-.stuffa-protected img[data-nimg] {
-  forced-color-adjust: none;
-  -webkit-forced-color-adjust: none;
-  filter: none !important;
-  -webkit-filter: none !important;
-}
