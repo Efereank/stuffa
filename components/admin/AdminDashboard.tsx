@@ -36,27 +36,48 @@ const STATUS_META: Record<
   },
 };
 
+/**
+ * Extrae el token de reserva de un QR que puede contener:
+ * - Una URL: https://dominio.com/reserva/{uuid}
+ * - Un UUID pelado: abc-123-def-456
+ * - Un código de reserva: STF-XXXXXX
+ */
+function extractToken(raw: string): {
+  value: string;
+  field: 'qr_token' | 'code' | 'unknown';
+} {
+  const trimmed = raw.trim();
+  if (!trimmed) return { value: '', field: 'unknown' };
+
+  // 1. URL con /reserva/{uuid}
+  const reservaMatch = trimmed.match(
+    /reserva\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i,
+  );
+  if (reservaMatch?.[1]) {
+    return { value: reservaMatch[1], field: 'qr_token' };
+  }
+
+  // 2. Cualquier UUID en el string
+  const uuidMatch = trimmed.match(
+    /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i,
+  );
+  if (uuidMatch) {
+    return { value: uuidMatch[0], field: 'qr_token' };
+  }
+
+  // 3. Código de reserva STF-XXXXXX
+  const codeMatch = trimmed.match(/STF-[A-Z0-9]{6}/i);
+  if (codeMatch) {
+    return { value: codeMatch[0].toUpperCase(), field: 'code' };
+  }
+
+  // 4. Fallback: devolvemos el raw por si acaso
+  return { value: trimmed, field: 'unknown' };
+}
+
 interface AdminDashboardProps {
   initialReservations: AdminReservation[];
   date: string;
-}
-
-/** Extrae un UUID de un QR que puede ser URL o UUID pelado */
-function extractToken(raw: string): string {
-  const trimmed = raw.trim();
-  if (!trimmed) return '';
-
-  // UUID pelado (contiene guiones y no /)
-  if (!trimmed.includes('/')) return trimmed;
-
-  // Es una URL → extraemos el último segmento
-  try {
-    const url = new URL(trimmed);
-    const parts = url.pathname.split('/').filter(Boolean);
-    return parts[parts.length - 1] ?? '';
-  } catch {
-    return trimmed;
-  }
 }
 
 export default function AdminDashboard({
@@ -112,27 +133,41 @@ export default function AdminDashboard({
 
   const handleScan = useCallback(
     async (rawValue: string): Promise<string> => {
-      // Acepta QR con URL completa o con UUID pelado
-      const token = extractToken(rawValue);
+      // 🔍 LOG DE DIAGNÓSTICO — Abre F12 → Console para verlo
+      console.log('[Scanner] QR detectado:', rawValue);
 
-      if (!token) return '❌ QR inválido.';
+      const { value, field } = extractToken(rawValue);
 
-      const { data, error } = await supabaseRef.current
+      console.log('[Scanner] Extraído:', { value, field });
+
+      if (!value || field === 'unknown') {
+        return '❌ QR inválido o no reconocido.';
+      }
+
+      // Actualizamos según el campo encontrado
+      const updateData = {
+        status: 'checked_in' as const,
+        checked_in_at: new Date().toISOString(),
+      };
+
+      const query = supabaseRef.current
         .from('reservations')
-        .update({
-          status: 'checked_in',
-          checked_in_at: new Date().toISOString(),
-        })
-        .eq('qr_token', token)
-        .select('code, customer_name, reservation_date')
-        .maybeSingle<{
-          code: string;
-          customer_name: string;
-          reservation_date: string;
-        }>();
+        .update(updateData)
+        .eq(field, value)
+        .select('code, customer_name')
+        .maybeSingle<{ code: string; customer_name: string }>();
 
-      if (error) return '❌ QR inválido o no reconocido.';
-      if (!data) return '❌ No existe una reserva con este código.';
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('[Scanner] Error de Supabase:', error);
+        return `❌ ${error.message}`;
+      }
+
+      if (!data) {
+        console.warn('[Scanner] Sin resultados para:', { field, value });
+        return '❌ No existe una reserva con este código.';
+      }
 
       void refresh();
       return `✅ ${data.customer_name} — ${data.code}`;
@@ -185,7 +220,7 @@ export default function AdminDashboard({
         <button
           type="button"
           onClick={() => setScannerOpen(true)}
-          className="min-h-[48px] w-full rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 px-5 py-3 text-sm font-bold uppercase tracking-wider text-black transition hover:from-amber-300 hover:to-amber-400 sm:w-auto"
+          className="min-h-[48px] w-full rounded-xl bg-gradient-to-r from-red-700 via-red-600 to-red-500 px-5 py-3 text-sm font-bold uppercase tracking-wider text-white transition hover:from-red-600 hover:to-red-500 sm:w-auto"
         >
           📷 Escanear QR
         </button>
@@ -210,7 +245,7 @@ export default function AdminDashboard({
               className={cn(
                 'shrink-0 rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-wide transition',
                 filter === s
-                  ? 'border-amber-400 bg-amber-400/15 text-amber-300'
+                  ? 'border-red-500 bg-red-600/20 text-red-300'
                   : 'border-white/10 text-white/50 hover:bg-white/5',
               )}
             >
@@ -230,13 +265,13 @@ export default function AdminDashboard({
         {filtered.map((r) => (
           <article
             key={r.id}
-            className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-neutral-900/60 p-4 lg:flex-row lg:items-center"
+            className="flex flex-col gap-3 rounded-2xl border border-red-950/60 bg-neutral-950/80 p-4 lg:flex-row lg:items-center"
           >
             <div className="flex items-center justify-between gap-3 lg:min-w-[120px] lg:flex-col lg:items-start lg:justify-start">
               <span className="text-lg font-bold text-white lg:text-xl">
                 {formatTime(r.reservation_time)}
               </span>
-              <span className="rounded-full bg-amber-400/15 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-amber-400">
+              <span className="rounded-full bg-red-500/15 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-red-400">
                 {r.tables?.code ?? '—'}
               </span>
             </div>
@@ -265,7 +300,7 @@ export default function AdminDashboard({
 
             <div className="flex flex-wrap gap-2 lg:justify-end">
               <ActionButton onClick={() => setEditing(r)} tone="sky">
-                 Editar
+                ✏️ Editar
               </ActionButton>
 
               {r.status !== 'checked_in' && (
@@ -327,13 +362,13 @@ function StatCard({
 }) {
   const tones = {
     neutral: 'text-white',
-    amber: 'text-amber-400',
+    amber: 'text-red-400',
     emerald: 'text-emerald-400',
     sky: 'text-sky-400',
   } as const;
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-neutral-900/60 p-3 sm:p-4">
+    <div className="rounded-2xl border border-red-950/60 bg-neutral-950/80 p-3 sm:p-4">
       <p className="text-[10px] uppercase tracking-wide text-white/40 sm:text-[11px]">
         {label}
       </p>
