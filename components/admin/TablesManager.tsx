@@ -448,7 +448,7 @@ export default function TablesManager() {
       )}
 
       <div className="rounded-2xl border border-white/10 bg-white/5 p-3 text-[11px] text-white/60 sm:p-4 sm:text-xs">
-        <p className="mb-1 font-semibold text-white/80">💡 Notas:</p>
+        <p className="mb-1 font-semibold text-white/80"> Notas:</p>
         <ul className="list-inside list-disc space-y-0.5">
           <li>
             <b>Código:</b> nombre visible de la mesa (ej. BALCÓN 48, VIP 01).

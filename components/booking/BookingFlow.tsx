@@ -122,7 +122,7 @@ export default function BookingFlow({
               className="group flex items-center gap-3 rounded-xl border border-red-900/60 bg-black/40 px-3 py-2 text-left transition hover:border-red-700 hover:bg-red-950/30 active:scale-[0.98]"
             >
               <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-600/30 text-lg">
-                👥
+                S
               </span>
               <span className="flex flex-col">
                 <span className="text-[10px] font-bold uppercase tracking-widest text-red-500">
@@ -162,7 +162,7 @@ export default function BookingFlow({
                   </span>
                 </>
               ) : (
-                <>Sin mesas disponibles para tu grupo</>
+                <>Sin mesas disponibles para tu grupo, contacta con nosotros al +58 412-6924656</>
               )}
             </p>
           )}

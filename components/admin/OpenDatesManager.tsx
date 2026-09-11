@@ -256,7 +256,7 @@ export default function OpenDatesManager() {
 
       {/* Ayuda */}
       <div className="rounded-2xl border border-white/10 bg-white/5 p-3 text-[11px] text-white/60 sm:p-4 sm:text-xs">
-        <p className="mb-1 font-semibold text-white/80">💡 Cómo funciona:</p>
+        <p className="mb-1 font-semibold text-white/80"> Cómo funciona:</p>
         <ul className="list-inside list-disc space-y-0.5">
           <li>
             <b>Un click</b> activa/desactiva el día.

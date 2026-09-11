@@ -265,7 +265,7 @@ export default function AdminDashboard({
 
             <div className="flex flex-wrap gap-2 lg:justify-end">
               <ActionButton onClick={() => setEditing(r)} tone="sky">
-                ✏️ Editar
+                 Editar
               </ActionButton>
 
               {r.status !== 'checked_in' && (
