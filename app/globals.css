@@ -59,3 +59,49 @@ body {
 }
 
 
+/* ============================================================
+   ANIMACIÓN DE ENTRADA DEL MAPA
+   ============================================================ */
+
+@keyframes table-entrance {
+  0% {
+    opacity: 0;
+    scale: 0.3;
+    filter: blur(8px);
+  }
+  50% {
+    opacity: 1;
+    filter: blur(0);
+  }
+  100% {
+    opacity: 1;
+    scale: 1;
+    filter: blur(0);
+  }
+}
+
+@keyframes map-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.table-entrance {
+  animation: table-entrance 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  transform-origin: center center;
+}
+
+.map-entrance {
+  animation: map-fade-in 0.5s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .table-entrance,
+  .map-entrance {
+    animation: none !important;
+  }
+}
+

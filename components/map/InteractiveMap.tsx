@@ -50,6 +50,9 @@ const MOBILE_MIN_WIDTH = 900;
 
 const EXCLUDED_CLASSES = ['rzpp-ignore', 'rzpp-control'];
 
+/** Milisegundos entre la aparición de cada mesa */
+const STAGGER_DELAY_MS = 30;
+
 export default function InteractiveMap({
   tables,
   selectedTableId = null,
@@ -111,7 +114,6 @@ export default function InteractiveMap({
           </div>
         )}
 
-        {/* Modo normal: en móvil scroll horizontal, en desktop zoom */}
         {isMobile ? (
           <ScrollableCanvas
             tables={tables}
@@ -137,7 +139,6 @@ export default function InteractiveMap({
         <Legend />
       </div>
 
-      {/* Modo pantalla completa — siempre con zoom */}
       {fullscreen && (
         <div className="fixed inset-0 z-50 flex flex-col bg-black animate-fade-in">
           <div className="safe-top flex items-center justify-between border-b border-red-950/60 bg-black px-3 py-3">
@@ -202,7 +203,7 @@ function ScrollableCanvas({
   return (
     <div className="overflow-x-auto no-scrollbar">
       <div
-        className="relative select-none"
+        className="map-entrance relative select-none"
         style={{
           minWidth: `${MOBILE_MIN_WIDTH}px`,
           aspectRatio: FLOOR_PLAN_RATIO,
@@ -217,10 +218,11 @@ function ScrollableCanvas({
           className="pointer-events-none select-none object-cover"
         />
 
-        {tables.map((table) => (
+        {tables.map((table, index) => (
           <TableButton
             key={table.id}
             table={table}
+            index={index}
             selectedTableId={selectedTableId}
             onSelectTable={onSelectTable}
             minCapacity={minCapacity}
@@ -292,7 +294,7 @@ function ZoomCanvas({
               wrapperStyle={{ width: '100%', height: '100%' }}
               contentStyle={{ width: '100%', height: '100%' }}
             >
-              <div className="relative h-full w-full">
+              <div className="map-entrance relative h-full w-full">
                 <Image
                   src={floorPlanSrc}
                   alt="Plano del local Stuffa Disco & Lounge"
@@ -302,10 +304,11 @@ function ZoomCanvas({
                   className="pointer-events-none select-none object-cover"
                 />
 
-                {tables.map((table) => (
+                {tables.map((table, index) => (
                   <TableButton
                     key={table.id}
                     table={table}
+                    index={index}
                     selectedTableId={selectedTableId}
                     onSelectTable={onSelectTable}
                     minCapacity={minCapacity}
@@ -324,7 +327,6 @@ function ZoomCanvas({
               </div>
             </TransformComponent>
 
-            {/* Controles de zoom */}
             <div className="rzpp-control absolute bottom-3 left-3 z-50 flex flex-col gap-1.5 sm:bottom-4 sm:left-4">
               <ZoomButton
                 onClick={() => {
@@ -375,12 +377,14 @@ function ZoomCanvas({
 
 function TableButton({
   table,
+  index,
   selectedTableId,
   onSelectTable,
   minCapacity,
   maxCapacity,
 }: {
   table: MapTable;
+  index: number;
   selectedTableId: string | null;
   onSelectTable: (table: MapTable) => void;
   minCapacity: number;
@@ -436,12 +440,14 @@ function TableButton({
         minHeight: '36px',
         touchAction: 'manipulation',
         WebkitTapHighlightColor: 'transparent',
+        // ✨ Animación de entrada escalonada
+        animationDelay: `${index * STAGGER_DELAY_MS}ms`,
       }}
       className={cn(
-        'rzpp-ignore',
+        'rzpp-ignore table-entrance',
         'absolute flex items-center justify-center border-2',
         'text-[10px] font-bold uppercase tracking-tight sm:text-[11px]',
-        'transition-[background-color,border-color,box-shadow,transform] duration-200 outline-none',
+        'transition-[background-color,border-color,box-shadow] duration-200 outline-none',
         'focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-1 focus-visible:ring-offset-black',
         table.shape === 'circle' ? 'rounded-full' : 'rounded-md',
         STATE_STYLES[visualState],
