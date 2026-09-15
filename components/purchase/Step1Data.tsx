@@ -166,8 +166,8 @@ export default function Step1Data({
         </Field>
 
         <Field label="Género" required>
-          <div className="grid grid-cols-3 gap-2">
-            {(['M', 'F', 'O'] as CustomerGender[]).map((g) => (
+          <div className="grid grid-cols-2 gap-2">
+            {(['M', 'F'] as CustomerGender[]).map((g) => (
               <button
                 key={g}
                 type="button"
@@ -179,7 +179,7 @@ export default function Step1Data({
                     : 'border-red-950/60 bg-black/40 text-white/60 hover:border-red-800',
                 )}
               >
-                {g === 'M' ? 'Masc.' : g === 'F' ? 'Fem.' : 'Otro'}
+                {g === 'M' ? 'Masculino' : 'Femenino'}
               </button>
             ))}
           </div>
@@ -282,11 +282,7 @@ export default function Step1Data({
           </Field>
         </div>
 
-        {form.menCount + form.womenCount === form.quantity && (
-          <p className="mt-3 flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-[11px] text-emerald-300">
-            ✓ Distribución correcta
-          </p>
-        )}
+
       </div>
 
       {/* Total */}
