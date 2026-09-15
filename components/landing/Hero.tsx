@@ -16,7 +16,7 @@ export default function Hero() {
         </video>
 
         {/* Overlay oscuro */}
-        <div className="absolute inset-0 bg-black/50" />
+        <div className="absolute inset-0 bg-black/20" />
 
         {/* Gradiente rojo radial */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(220,38,38,0.35),_transparent_60%)]" />
