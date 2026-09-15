@@ -5,12 +5,33 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatCurrency(value: number, currency = 'USD') {
-  return new Intl.NumberFormat('en-US', {
+// ============================================================
+// FORMATO
+// ============================================================
+
+export function formatCurrency(
+  value: number,
+  currency: 'USD' | 'VES' = 'USD',
+) {
+  if (currency === 'USD') {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      maximumFractionDigits: 2,
+    }).format(value);
+  }
+  return new Intl.NumberFormat('es-VE', {
     style: 'currency',
-    currency,
-    maximumFractionDigits: 0,
+    currency: 'VES',
+    maximumFractionDigits: 2,
   }).format(value);
+}
+
+export function formatBs(value: number) {
+  return `Bs. ${new Intl.NumberFormat('es-VE', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value)}`;
 }
 
 export function formatTime(value: string) {
@@ -20,7 +41,10 @@ export function formatTime(value: string) {
 export function formatLongDate(value: string) {
   const [y, m, d] = value.split('-').map(Number);
   return new Intl.DateTimeFormat('es-MX', {
-    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
     timeZone: 'UTC',
   }).format(new Date(Date.UTC(y, m - 1, d)));
 }
@@ -28,21 +52,26 @@ export function formatLongDate(value: string) {
 export function formatShortDate(value: string) {
   const [y, m, d] = value.split('-').map(Number);
   return new Intl.DateTimeFormat('es-MX', {
-    day: 'numeric', month: 'short', timeZone: 'UTC',
+    day: 'numeric',
+    month: 'short',
+    timeZone: 'UTC',
   }).format(new Date(Date.UTC(y, m - 1, d)));
 }
 
 export function formatDayName(value: string) {
   const [y, m, d] = value.split('-').map(Number);
   return new Intl.DateTimeFormat('es-MX', {
-    weekday: 'long', timeZone: 'UTC',
+    weekday: 'long',
+    timeZone: 'UTC',
   }).format(new Date(Date.UTC(y, m - 1, d)));
 }
 
 export function formatMonthYear(value: string) {
   const [y, m] = value.split('-').map(Number);
   return new Intl.DateTimeFormat('es-MX', {
-    month: 'long', year: 'numeric', timeZone: 'UTC',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
   }).format(new Date(Date.UTC(y, m - 1, 1)));
 }
 
@@ -50,75 +79,74 @@ export function todayISO(timeZone = 'America/Caracas') {
   return new Intl.DateTimeFormat('en-CA', { timeZone }).format(new Date());
 }
 
-/** Construye "YYYY-MM-DD" sin problemas de zona horaria */
+// ============================================================
+// HELPERS DE FECHA
+// ============================================================
+
 export function toISODate(year: number, month: number, day: number) {
   return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
-/** Devuelve el primer día del mes como "YYYY-MM-DD" */
-export function firstDayOfMonth(year: number, month: number) {
-  return toISODate(year, month, 1);
+export function daysInMonth(year: number, month: number) {
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
 }
 
-/** Devuelve el último día del mes como "YYYY-MM-DD" */
-export function lastDayOfMonth(year: number, month: number) {
-  return toISODate(year, month, new Date(Date.UTC(year, month, 0)).getUTCDate());
+export function firstWeekdayOfMonth(year: number, month: number) {
+  return new Date(Date.UTC(year, month - 1, 1)).getUTCDay();
 }
 
-/** Suma meses a "YYYY-MM" (para navegación) */
 export function shiftMonth(ym: string, delta: number) {
   const [y, m] = ym.split('-').map(Number);
   const d = new Date(Date.UTC(y, m - 1 + delta, 1));
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
 }
 
-/** "YYYY-MM-DD" → "YYYY-MM" */
 export function monthKey(date: string) {
   return date.slice(0, 7);
 }
 
-/** Número de días del mes */
-export function daysInMonth(year: number, month: number) {
-  return new Date(Date.UTC(year, month, 0)).getUTCDate();
-}
+/**
+ * Cuenta regresiva hasta una fecha+hora
+ */
+export function getTimeRemaining(targetISO: string) {
+  const target = new Date(targetISO).getTime();
+  const now = Date.now();
+  const diff = Math.max(0, target - now);
 
-/** Día de la semana del primer día del mes (0=dom) */
-export function firstWeekdayOfMonth(year: number, month: number) {
-  return new Date(Date.UTC(year, month - 1, 1)).getUTCDay();
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+  const minutes = Math.floor((diff / (1000 * 60)) % 60);
+  const seconds = Math.floor((diff / 1000) % 60);
+
+  return { days, hours, minutes, seconds, isPast: diff === 0 };
 }
 
 // ============================================================
 // ERRORES RPC
 // ============================================================
+
 export const RPC_ERRORS: Record<string, string> = {
-  INVALID_NAME: 'Ingresa un nombre válido (mínimo 3 caracteres).',
+  INVALID_NAME: 'Ingresa un nombre válido.',
   INVALID_PHONE: 'Ingresa un teléfono válido.',
-  INVALID_TIME: 'El horario de reserva es de 10:00 PM a 11:00 PM.',
-  DATE_IN_PAST: 'La fecha seleccionada ya pasó.',
-  CLOSED_DAY: 'Stuffa no abre ese día. Elige una fecha disponible.',
-  TABLE_NOT_FOUND: 'La mesa ya no está disponible.',
-  PARTY_TOO_LARGE: 'El número de personas excede la capacidad de la mesa.',
-  TABLE_ALREADY_RESERVED: 'Alguien acaba de reservar esta mesa. Elige otra.',
-  NOT_STAFF: 'No tienes permisos para hacer esto.',
-
-    PRIVACY_NOT_ACCEPTED: 'Debes aceptar el aviso de privacidad.',
-  RATE_LIMITED_IP: 'Demasiadas reservas desde tu conexión. Espera una hora.',
-  RATE_LIMITED_PHONE: 'Este teléfono ya tiene reservas recientes.',
-  RESERVATION_NOT_FOUND: 'No encontramos esa reserva.',
-  ALREADY_CANCELLED: 'Esta reserva ya fue cancelada.',
-  ALREADY_CHECKED_IN: 'No se puede cancelar: ya se hizo check-in.',
-
-
-  TOO_FAST: 'Espera un momento antes de confirmar.',
-  EXPIRED_FORM: 'El formulario tardó demasiado. Recarga la página e intenta de nuevo.',
-  MISSING_FIELDS: 'Faltan datos por completar.',
-  INVALID_BODY: 'Solicitud inválida.',
-
-    PHONE_ALREADY_HAS_ACTIVE: 'Ya tienes una reserva activa con este teléfono. Cancélala primero para hacer otra.',  // 👈 NUEVA
+  INVALID_CEDULA: 'Ingresa una cédula válida.',
+  INVALID_QUANTITY: 'La cantidad de entradas no es válida.',
+  INVALID_PROOF: 'Debes subir una captura del comprobante.',
+  UNDERAGE: 'Debes ser mayor de 18 años.',
+  DISTRIBUTION_MISMATCH: 'La distribución de hombres/mujeres no coincide con la cantidad total.',
+  EVENT_NOT_FOUND: 'El evento ya no está disponible.',
+  EVENT_PAST: 'Este evento ya pasó.',
+  TICKET_TYPE_NOT_FOUND: 'El tipo de entrada ya no está disponible.',
+  NOT_ENOUGH_TICKETS: 'No hay suficientes entradas disponibles.',
+  ORDER_NOT_FOUND: 'No encontramos la orden.',
+  ORDER_NOT_PENDING: 'Esta orden ya fue procesada.',
+  ORDER_ALREADY_PROCESSED: 'La orden ya fue verificada o rechazada.',
+  DUPLICATE_ORDER: 'Ya existe una orden con estos datos.',
+  RATE_LIMITED_IP: 'Demasiados intentos desde tu conexión. Espera un momento.',
+  RATE_LIMITED_PHONE: 'Este teléfono ya hizo varias compras recientes.',
+  NOT_STAFF: 'No tienes permisos para esto.',
 };
 
 export function translateRpcError(message: string) {
   const key = Object.keys(RPC_ERRORS).find((k) => message.includes(k));
-  return key ? RPC_ERRORS[key] : 'Ocurrió un error al procesar la reserva. Intenta de nuevo.';
+  return key ? RPC_ERRORS[key] : 'Ocurrió un error. Intenta de nuevo.';
 }
-

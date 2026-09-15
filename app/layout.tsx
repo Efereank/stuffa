@@ -9,11 +9,38 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'Stuffa Disco & Lounge — Reserva tu mesa',
-  description: 'Selecciona tu mesa en el plano y reserva en segundos.',
+  title: {
+    default: 'Stuffa Disco & Lounge · Experiencia Nocturna Premium',
+    template: '%s · Stuffa',
+  },
+  description:
+    'Los dueños de la rumba los fines de semana. Compra tus entradas para los eventos de Stuffa Disco & Lounge en Maracaibo.',
   icons: {
-    icon: '/stuffa-logo.png',
-    apple: '/stuffa-logo.png',
+    icon: '/favicon.ico',
+    apple: '/icon.png',
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'es_VE',
+    url: process.env.NEXT_PUBLIC_SITE_URL,
+    siteName: 'Stuffa Disco & Lounge',
+    title: 'Stuffa Disco & Lounge · Experiencia Nocturna Premium',
+    description:
+      'Compra tus entradas para los eventos de Stuffa Disco & Lounge en Maracaibo.',
+    images: [
+      {
+        url: '/og-image.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'Stuffa Disco & Lounge',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Stuffa Disco & Lounge',
+    description: 'Compra tus entradas para los eventos de Stuffa.',
+    images: ['/og-image.jpg'],
   },
 };
 
@@ -32,7 +59,7 @@ export default function RootLayout({
   return (
     <html lang="es" className={`dark ${inter.variable}`}>
       <body
-        className={`${inter.className} stuffa-bg min-h-dvh text-white antialiased`}
+        className={`${inter.className} min-h-dvh scroll-smooth bg-black text-white antialiased`}
       >
         {children}
       </body>

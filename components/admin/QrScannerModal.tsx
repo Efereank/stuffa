@@ -48,8 +48,6 @@ export default function QrScannerModal({
     const message = await onToken(value);
     setFeedback(message);
 
-    // Si fue escaneo exitoso o ya escaneado → pausa más larga
-    // para que el admin pueda leer el mensaje
     const isImportant =
       message.startsWith('✅') || message.startsWith('⚠️');
     const cooldown = isImportant ? 3000 : 2000;
@@ -96,7 +94,6 @@ export default function QrScannerModal({
             }}
           />
 
-          {/* Overlay cuando está pausado/processing */}
           {paused && !feedback && (
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/40">
               <span className="h-10 w-10 animate-spin rounded-full border-4 border-red-500 border-t-transparent" />
