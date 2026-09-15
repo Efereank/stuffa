@@ -138,7 +138,7 @@ export default function Step1Data({
             onChange={(e) => update('name', e.target.value)}
             autoComplete="name"
             className={inputClass}
-            placeholder="Francisco Díaz"
+            placeholder=" David Martínez"
           />
         </Field>
 
@@ -149,7 +149,7 @@ export default function Step1Data({
             onChange={(e) => update('cedula', e.target.value)}
             autoComplete="off"
             className={inputClass}
-            placeholder="V-31279765"
+            placeholder="V-12345678"
           />
         </Field>
 
@@ -206,7 +206,7 @@ export default function Step1Data({
             autoComplete="tel"
             inputMode="tel"
             className={inputClass}
-            placeholder="+58 412 505 2658"
+            placeholder="+58 412 505 2536"
           />
         </Field>
       </div>
@@ -281,8 +281,6 @@ export default function Step1Data({
             />
           </Field>
         </div>
-
-
       </div>
 
       {/* Total */}

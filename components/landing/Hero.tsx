@@ -40,7 +40,7 @@ export default function Hero() {
         <div className="mx-auto mb-6 flex w-fit max-w-[90vw] items-center gap-2 rounded-full border border-red-500/30 bg-black/60 px-3 py-1.5 backdrop-blur sm:px-4">
           <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-red-500" />
           <span className="truncate text-[10px] font-bold uppercase tracking-wider text-red-300 sm:text-xs sm:tracking-widest">
-            Maracaibo
+            stuffa disco & lounge
           </span>
         </div>
 

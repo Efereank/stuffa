@@ -77,7 +77,7 @@ export default function Step2Payment({
             </span>
           </div>
           <div className="flex justify-between text-white/70">
-            <span>Tasa BCV</span>
+            <span>Tasa VES</span>
             <span className="font-mono text-white/90">
               Bs. {exchangeRate.toFixed(2)}
             </span>

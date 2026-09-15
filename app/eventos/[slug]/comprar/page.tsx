@@ -10,16 +10,18 @@ export const dynamic = 'force-dynamic';
 
 async function getExchangeRate(): Promise<number> {
   try {
-    const res = await fetch('https://pydolarve.org/api/v1/dollar?page=bcv', {
-      next: { revalidate: 1800 },
-    });
-    if (!res.ok) throw new Error('rate fetch failed');
-    const data = await res.json();
-    const rate = Number(data?.price);
-    return !rate || isNaN(rate) ? 40 : rate;
-  } catch {
-    return 40;
+    const supabase = await createClient();
+    const { data } = await supabase
+      .rpc('get_current_exchange_rate')
+      .single<{ rate: number; updated_at: string }>();
+
+    if (data?.rate && data.rate > 0) return data.rate;
+  } catch (err) {
+    console.error('[comprar] exchange rate fetch failed', err);
   }
+
+  // Fallback por si Supabase falla
+  return 40;
 }
 
 export default async function PurchasePage({

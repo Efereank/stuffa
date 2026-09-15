@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
 import type { PaymentConfig, PaymentMethod } from '@/lib/types';
@@ -127,6 +127,9 @@ export default function PaymentConfigForm({ initial }: PaymentConfigFormProps) {
 
   return (
     <div className="space-y-4">
+      {/* 💵 Tasa del dólar */}
+      <ExchangeRateCard />
+
       {msg && (
         <p
           className={cn(
@@ -247,6 +250,142 @@ export default function PaymentConfigForm({ initial }: PaymentConfigFormProps) {
           </li>
         </ul>
       </div>
+    </div>
+  );
+}
+
+// ============================================================
+// TARJETA DE TASA DEL DÓLAR
+// ============================================================
+
+function ExchangeRateCard() {
+  const [rate, setRate] = useState('');
+  const [current, setCurrent] = useState<{
+    rate: number;
+    updated_at: string;
+  } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  async function loadCurrent() {
+    const supabase = createClient();
+    const { data } = await supabase
+      .rpc('get_current_exchange_rate')
+      .single<{ rate: number; updated_at: string }>();
+
+    setCurrent(data ?? null);
+    if (data?.rate) setRate(String(data.rate));
+    setFetching(false);
+  }
+
+  useEffect(() => {
+    void loadCurrent();
+  }, []);
+
+  async function save() {
+    setLoading(true);
+    setMsg(null);
+
+    const numRate = Number(rate);
+    if (isNaN(numRate) || numRate <= 0) {
+      setMsg('❌ Ingresa una tasa válida (mayor a 0)');
+      setLoading(false);
+      return;
+    }
+
+    const supabase = createClient();
+    const { error } = await supabase.rpc('admin_set_exchange_rate', {
+      p_rate: numRate,
+    });
+
+    setLoading(false);
+
+    if (error) {
+      setMsg(`❌ ${error.message}`);
+    } else {
+      setMsg(`✅ Tasa actualizada a ${numRate} Bs`);
+      await loadCurrent();
+    }
+  }
+
+  return (
+    <div className="rounded-2xl border border-red-500/40 bg-gradient-to-br from-red-950/20 to-black p-5">
+      <div className="mb-4 flex items-start gap-3">
+        <span className="text-3xl">💵</span>
+        <div>
+          <h2 className="text-lg font-black text-white">
+            Tasa del dólar (Bs.)
+          </h2>
+          <p className="mt-0.5 text-xs text-white/50">
+            Esta tasa se usa para convertir el total en dólares a bolívares
+            en el flujo de compra.
+          </p>
+        </div>
+      </div>
+
+      {fetching ? (
+        <p className="text-xs text-white/40">Cargando…</p>
+      ) : (
+        <>
+          {current && (
+            <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-red-500/40 bg-red-500/15 px-3 py-1 font-bold uppercase tracking-wider text-red-300">
+                <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
+                Tasa actual: {current.rate.toFixed(2)} Bs
+              </span>
+              <span className="text-white/40">
+                Actualizada:{' '}
+                {new Date(current.updated_at).toLocaleString('es-VE', {
+                  day: '2-digit',
+                  month: 'short',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </span>
+            </div>
+          )}
+
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <input
+              type="number"
+              inputMode="decimal"
+              step="0.01"
+              min={0}
+              value={rate}
+              onChange={(e) => setRate(e.target.value)}
+              placeholder="Ej: 45.50"
+              className="min-h-[44px] flex-1 rounded-xl border border-red-950/60 bg-black/40 px-3.5 py-2.5 text-sm text-white placeholder:text-white/30 outline-none transition focus:border-red-500/70"
+            />
+            <button
+              type="button"
+              onClick={save}
+              disabled={loading}
+              className={cn(
+                'min-h-[44px] rounded-xl px-5 py-2.5 text-xs font-black uppercase tracking-wider transition',
+                loading
+                  ? 'cursor-wait bg-white/10 text-white/40'
+                  : 'bg-gradient-to-r from-red-700 via-red-600 to-red-500 text-white shadow-lg shadow-red-900/40 hover:from-red-600 hover:to-red-500',
+              )}
+            >
+              {loading ? 'Guardando…' : 'Guardar tasa'}
+            </button>
+          </div>
+
+          {msg && (
+            <p
+              className={cn(
+                'mt-3 rounded-lg border px-3 py-2 text-xs',
+                msg.startsWith('✅')
+                  ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-300'
+                  : 'border-red-500/30 bg-red-500/10 text-red-300',
+              )}
+            >
+              {msg}
+            </p>
+          )}
+        </>
+      )}
     </div>
   );
 }

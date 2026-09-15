@@ -1,39 +1,37 @@
 import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 
-/**
- * Obtiene la tasa USD → Bs del BCV.
- * Fuente: pydolarve.org (gratis)
- * Si falla, devuelve una tasa por defecto.
- */
-const FALLBACK_RATE = 40;
-
-export const revalidate = 1800; // cache 30 min
+export const revalidate = 60; // revalidar cada 1 minuto
 
 export async function GET() {
   try {
-    const res = await fetch('https://pydolarve.org/api/v1/dollar?page=bcv', {
-      next: { revalidate: 1800 },
-    });
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { auth: { persistSession: false, autoRefreshToken: false } },
+    );
 
-    if (!res.ok) throw new Error('Failed to fetch rate');
+    const { data } = await supabase
+      .rpc('get_current_exchange_rate')
+      .single<{ rate: number; updated_at: string }>();
 
-    const data = await res.json();
-    const rate = Number(data?.price);
-
-    if (!rate || isNaN(rate)) throw new Error('Invalid rate');
+    if (!data?.rate) {
+      return NextResponse.json(
+        { error: 'NO_RATE_CONFIGURED' },
+        { status: 500 },
+      );
+    }
 
     return NextResponse.json({
-      rate,
+      rate: data.rate,
       currency: 'VES',
-      source: 'BCV',
-      updated_at: data?.last_update ?? new Date().toISOString(),
+      updated_at: data.updated_at,
     });
-  } catch {
-    return NextResponse.json({
-      rate: FALLBACK_RATE,
-      currency: 'VES',
-      source: 'fallback',
-      updated_at: new Date().toISOString(),
-    });
+  } catch (err) {
+    console.error('[exchange-rate]', err);
+    return NextResponse.json(
+      { error: 'UNKNOWN' },
+      { status: 500 },
+    );
   }
 }
