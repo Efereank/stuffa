@@ -85,32 +85,6 @@ export default function ExperienceSection() {
           </div>
         </div>
 
-        {/* Cards de servicios */}
-        <div className="mt-10 grid gap-5 sm:mt-14 md:grid-cols-3">
-          {ITEMS.map((item) => (
-            <div
-              key={item.title}
-              className="group relative overflow-hidden rounded-2xl border border-red-950/60 bg-gradient-to-br from-black to-red-950/10 p-6 transition hover:border-red-800/60 sm:p-8"
-            >
-              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-red-500 to-transparent opacity-60" />
-              <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-red-600/10 blur-3xl transition group-hover:bg-red-600/20" />
-
-              <div className="relative">
-                <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-red-500/30 bg-red-950/30 text-3xl backdrop-blur">
-                  {item.icon}
-                </div>
-
-                <h3 className="text-lg font-black text-white sm:text-xl">
-                  {item.title}
-                </h3>
-
-                <p className="mt-3 text-sm leading-relaxed text-white/60">
-                  {item.text}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
       </div>
     </section>
   );
