@@ -35,7 +35,7 @@ export default function ContactSection() {
             rel="noopener noreferrer"
             className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-red-950/60 bg-black/40 px-8 py-4 text-sm font-bold uppercase tracking-wider text-white/80 backdrop-blur transition hover:border-red-800 hover:text-white sm:w-auto"
           >
-            <span className="text-base">💬</span>
+            <span className="text-base"></span>
             WhatsApp
           </a>
         </div>

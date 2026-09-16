@@ -33,7 +33,6 @@ export default function Footer() {
             </h3>
             <ul className="space-y-1.5 text-xs text-white/70 sm:text-sm">
               <li className="flex items-center gap-2">
-                <span className="text-base">🎵</span>
                 <span>Viernes y Sábados</span>
               </li>
               <li className="flex items-center gap-2">
@@ -59,7 +58,7 @@ export default function Footer() {
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 transition hover:text-white"
                 >
-                  <span className="text-base">💬</span>
+                  <span className="text-base"></span>
                   <span>WhatsApp</span>
                 </a>
               </li>
@@ -94,14 +93,6 @@ export default function Footer() {
               Info
             </h3>
             <ul className="space-y-2 text-xs text-white/70 sm:text-sm">
-              <li>
-                <Link
-                  href="/mi-reserva"
-                  className="transition hover:text-white"
-                >
-                  Buscar mi reserva
-                </Link>
-              </li>
               <li>
                 <Link
                   href="/privacidad"

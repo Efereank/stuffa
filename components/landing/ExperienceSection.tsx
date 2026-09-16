@@ -49,6 +49,9 @@ export default function ExperienceSection() {
               poster="/videos/experience-poster.jpg"
               className="absolute inset-0 h-full w-full object-cover"
             >
+              {/* 🎯 Safari/iOS prioriza MP4 (H.264) */}
+              <source src="/videos/experience.mp4" type="video/mp4" />
+              {/* 🎯 Chrome/Android prioriza WebM (más liviano) */}
               <source src="/videos/experience.webm" type="video/webm" />
             </video>
 
@@ -59,15 +62,15 @@ export default function ExperienceSection() {
             <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/80 to-transparent" />
             <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/80 to-transparent" />
 
-            {/* Badge "EN VIVO" (opcional, solo visual) */}
+            {/* Badge (solo visual) */}
             <div className="absolute left-4 top-4 flex items-center gap-2 rounded-full border border-red-500/40 bg-black/70 px-3 py-1.5 backdrop-blur sm:left-6 sm:top-6">
               <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" />
               <span className="text-[10px] font-bold uppercase tracking-widest text-white sm:text-xs">
-                Maracaibo 
+                Maracaibo
               </span>
             </div>
 
-            {/* Texto abajo (opcional) */}
+            {/* Texto abajo */}
             <div className="absolute inset-x-0 bottom-0 p-5 text-center sm:p-8">
               <p className="text-xl font-black leading-tight text-white drop-shadow-2xl sm:text-3xl md:text-4xl">
                 Vive la experiencia{' '}
@@ -82,7 +85,32 @@ export default function ExperienceSection() {
           </div>
         </div>
 
+        {/* Cards de servicios */}
+        <div className="mt-10 grid gap-5 sm:mt-14 md:grid-cols-3">
+          {ITEMS.map((item) => (
+            <div
+              key={item.title}
+              className="group relative overflow-hidden rounded-2xl border border-red-950/60 bg-gradient-to-br from-black to-red-950/10 p-6 transition hover:border-red-800/60 sm:p-8"
+            >
+              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-red-500 to-transparent opacity-60" />
+              <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-red-600/10 blur-3xl transition group-hover:bg-red-600/20" />
 
+              <div className="relative">
+                <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-red-500/30 bg-red-950/30 text-3xl backdrop-blur">
+                  {item.icon}
+                </div>
+
+                <h3 className="text-lg font-black text-white sm:text-xl">
+                  {item.title}
+                </h3>
+
+                <p className="mt-3 text-sm leading-relaxed text-white/60">
+                  {item.text}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );

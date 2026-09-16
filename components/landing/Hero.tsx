@@ -12,6 +12,9 @@ export default function Hero() {
           poster="/videos/hero-poster.jpg"
           className="absolute inset-0 h-full w-full object-cover object-center"
         >
+          {/* 🎯 Safari/iOS prioriza MP4 (H.264) */}
+          <source src="/videos/hero.mp4" type="video/mp4" />
+          {/* 🎯 Chrome/Android prioriza WebM (más liviano) */}
           <source src="/videos/hero.webm" type="video/webm" />
         </video>
 
@@ -40,7 +43,7 @@ export default function Hero() {
         <div className="mx-auto mb-6 flex w-fit max-w-[90vw] items-center gap-2 rounded-full border border-red-500/30 bg-black/60 px-3 py-1.5 backdrop-blur sm:px-4">
           <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-red-500" />
           <span className="truncate text-[10px] font-bold uppercase tracking-wider text-red-300 sm:text-xs sm:tracking-widest">
-            stuffa disco & lounge
+            stuffa disco &amp; lounge
           </span>
         </div>
 
@@ -70,7 +73,11 @@ export default function Hero() {
               strokeWidth="2.5"
               className="h-4 w-4 transition-transform group-hover:translate-x-1"
             >
-              <path d="M5 12h14M13 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
+              <path
+                d="M5 12h14M13 5l7 7-7 7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
           </a>
 
