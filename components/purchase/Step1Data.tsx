@@ -91,7 +91,7 @@ export default function Step1Data({
       setError('Ingresa un teléfono válido.');
       return;
     }
-    if (form.age < 18) {
+    if (!form.age || form.age < 18) {
       setError('Debes ser mayor de 18 años.');
       return;
     }
@@ -138,7 +138,7 @@ export default function Step1Data({
             onChange={(e) => update('name', e.target.value)}
             autoComplete="name"
             className={inputClass}
-            placeholder=" David Martínez"
+            placeholder="David Martínez"
           />
         </Field>
 
@@ -159,8 +159,16 @@ export default function Step1Data({
             type="number"
             min={18}
             max={99}
-            value={form.age}
-            onChange={(e) => update('age', Number(e.target.value) || 18)}
+            value={form.age === 0 ? '' : form.age}
+            onChange={(e) => {
+              const raw = e.target.value;
+              update('age', raw === '' ? 0 : Number(raw));
+            }}
+            onBlur={() => {
+              // Al salir del campo, corregir valores fuera de rango
+              if (form.age === 0 || form.age < 18) update('age', 18);
+              if (form.age > 99) update('age', 99);
+            }}
             className={inputClass}
           />
         </Field>
