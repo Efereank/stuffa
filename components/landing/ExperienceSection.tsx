@@ -73,13 +73,13 @@ export default function ExperienceSection() {
             {/* Texto abajo */}
             <div className="absolute inset-x-0 bottom-0 p-5 text-center sm:p-8">
               <p className="text-xl font-black leading-tight text-white drop-shadow-2xl sm:text-3xl md:text-4xl">
-                Vive la experiencia{' '}
+                Vive la Rebelde {' '}
                 <span className="bg-gradient-to-r from-red-500 to-red-700 bg-clip-text text-transparent">
-                  Stuffa
+                  Party
                 </span>
               </p>
               <p className="mt-2 text-xs text-white/70 sm:text-sm">
-                Viernes y sábados · 10PM — 5AM
+                Sábado 26 de Septiembre · 9PM — 3AM
               </p>
             </div>
           </div>

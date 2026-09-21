@@ -21,7 +21,7 @@ export default function Footer() {
   />
 </div>
             <p className="mt-3 max-w-xs text-xs leading-relaxed text-white/50">
-              Somos los dueños de la rumba los fines de semana. Reserva tu mesa
+              Somos los dueños de la rumba los fines de semana. Anticipa tu Ticket
               y vive la experiencia Stuffa.
             </p>
           </div>
@@ -37,7 +37,7 @@ export default function Footer() {
               </li>
               <li className="flex items-center gap-2">
                 <span className="text-base"></span>
-                <span>10:00 PM – 4:00 AM</span>
+                <span>9:00 PM – 3:00 AM</span>
               </li>
               <li className="mt-2 text-[11px] text-red-400">
                 + Eventos especiales
@@ -53,7 +53,7 @@ export default function Footer() {
             <ul className="space-y-2 text-xs text-white/70 sm:text-sm">
               <li>
                 <a
-                  href="https://wa.me/584120000000"
+                  href="https://wa.me/584146662623"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 transition hover:text-white"
@@ -75,7 +75,7 @@ export default function Footer() {
               </li>
               <li>
                 <a
-                  href="https://maps.google.com"
+                  href="https://www.google.com/maps/place/La+Stuffa/@10.6665038,-71.6040014,17z/data=!3m1!4b1!4m6!3m5!1s0x8e8999bb1ba36829:0x65d1e68b05be7d4b!8m2!3d10.6665038!4d-71.6040014!16s%2Fg%2F11sgzzzbck?entry=ttu&g_ep=EgoyMDI2MDkxNi4wIKXMDSoASAFQAw%3D%3D"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 transition hover:text-white"

@@ -91,7 +91,7 @@ export default function Hero() {
 
         <div className="mt-12 grid grid-cols-3 gap-4 border-t border-white/10 pt-8 sm:mt-16">
           <div>
-            <p className="text-2xl font-black text-white drop-shadow sm:text-3xl">500</p>
+            <p className="text-2xl font-black text-white drop-shadow sm:text-3xl">700</p>
             <p className="mt-1 text-[10px] uppercase tracking-widest text-white/50 sm:text-xs">Capacidad</p>
           </div>
           <div>
