@@ -14,7 +14,7 @@ export default function Step4Confirmation({
 }: {
   order: OrderDetail;
 }) {
-  // 🎯 Obtener el dominio actual desde el navegador (funciona con cualquier dominio)
+  // 🎯 Obtener el dominio actual desde el navegador
   const siteUrl =
     typeof window !== 'undefined'
       ? window.location.origin
@@ -33,8 +33,7 @@ export default function Step4Confirmation({
           ¡Pago en verificación!
         </h2>
         <p className="mx-auto mt-2 max-w-md text-sm text-white/60">
-          Tu pago está siendo revisado. En cuanto se confirme, recibirás tu QR
-          de acceso.
+          Tu pago está siendo revisado.
         </p>
       </div>
 
@@ -42,20 +41,30 @@ export default function Step4Confirmation({
       <div className="rounded-2xl border border-amber-500/40 bg-gradient-to-br from-amber-950/30 to-black p-5">
         <div className="flex items-start gap-3">
           <span className="text-2xl">⏳</span>
-          <div>
+          <div className="flex-1">
             <p className="text-sm font-bold text-amber-300">
               Verificación en proceso
             </p>
-            <p className="mt-1 text-xs text-white/60">
+            <p className="mt-1 text-xs leading-relaxed text-white/60">
               Nuestro equipo revisará tu comprobante en las próximas horas.
-              Guarda este código{' '}
-              <b className="text-red-400">{order.code}</b> para consultar en cualquier momento desde &ldquo;Mi orden&rdquo;.
             </p>
+
+            {/* 💡 Instrucción sobre el QR */}
+            <div className="mt-3 flex items-start gap-2 rounded-lg border border-amber-500/20 bg-black/40 px-3 py-2.5">
+              <span className="shrink-0 text-base">📸</span>
+              <p className="text-[11px] leading-relaxed text-white/70">
+                <b className="text-amber-300">Importante:</b> toma una captura
+                de pantalla del{' '}
+                <b className="text-white">código QR</b> que aparece abajo.
+                Escanéalo cuando quieras para consultar si tu pago ya fue
+                verificado.
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Ticket con QR (el QR se activa cuando verifican) */}
+      {/* Ticket con QR */}
       <div className="mx-auto w-full max-w-md overflow-hidden rounded-3xl border border-red-950/60 bg-neutral-950 shadow-2xl shadow-red-950/30">
         {/* Header */}
         <div className="relative px-5 py-6 text-white sm:px-6">
@@ -91,8 +100,9 @@ export default function Step4Confirmation({
               className="h-auto w-full"
             />
           </div>
-          <p className="text-center text-xs text-white/50">
-            Tu QR se activará al confirmarse el pago
+          <p className="max-w-[280px] text-center text-xs leading-relaxed text-white/60">
+            Escanea este QR para consultar el estado de tu orden.
+            Se activará por completo cuando verifiquemos tu pago.
           </p>
         </div>
 
@@ -136,9 +146,8 @@ export default function Step4Confirmation({
       </div>
 
       <p className="text-center text-[11px] text-white/40">
-        💡 Guarda tu código <b className="text-red-400">{order.code}</b> para
-        consultar tu orden en cualquier momento desde{' '}
-        <span className="text-white/60">&ldquo;Mi orden&rdquo;</span>.
+        💡 Guarda una captura del <b className="text-red-400">código QR</b> para
+        consultar el estado de tu orden en cualquier momento.
       </p>
     </div>
   );
