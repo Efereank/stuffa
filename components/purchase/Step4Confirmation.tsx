@@ -46,20 +46,8 @@ export default function Step4Confirmation({
               Verificación en proceso
             </p>
             <p className="mt-1 text-xs leading-relaxed text-white/60">
-              Nuestro equipo revisará tu comprobante en las próximas horas.
+              Nuestro equipo revisará tu comprobante en las próximas horas. Guarda este código QR para consultar el estado de tu orden en cualquier momento.
             </p>
-
-            {/* 💡 Instrucción sobre el QR */}
-            <div className="mt-3 flex items-start gap-2 rounded-lg border border-amber-500/20 bg-black/40 px-3 py-2.5">
-              <span className="shrink-0 text-base">📸</span>
-              <p className="text-[11px] leading-relaxed text-white/70">
-                <b className="text-amber-300">Importante:</b> toma una captura
-                de pantalla del{' '}
-                <b className="text-white">código QR</b> que aparece abajo.
-                Escanéalo cuando quieras para consultar si tu pago ya fue
-                verificado.
-              </p>
-            </div>
           </div>
         </div>
       </div>
