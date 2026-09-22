@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { QRCodeSVG } from 'qrcode.react';
 import {
-  formatBs,
   formatCurrency,
   formatLongDate,
   formatTime,
@@ -32,8 +31,8 @@ export default function Step4Confirmation({
           ¡Pago en verificación!
         </h2>
         <p className="mx-auto mt-2 max-w-md text-sm text-white/60">
-          Tu pago está siendo revisado. En cuanto se confirme, recibirás tu QR
-          de acceso.
+          Tu comprobante fue recibido correctamente. Nuestro equipo lo revisará
+          pronto.
         </p>
       </div>
 
@@ -41,19 +40,49 @@ export default function Step4Confirmation({
       <div className="rounded-2xl border border-amber-500/40 bg-gradient-to-br from-amber-950/30 to-black p-5">
         <div className="flex items-start gap-3">
           <span className="text-2xl">⏳</span>
-          <div>
+          <div className="flex-1">
             <p className="text-sm font-bold text-amber-300">
               Verificación en proceso
             </p>
             <p className="mt-1 text-xs text-white/60">
               Nuestro equipo revisará tu comprobante en las próximas horas.
-              Recibirás una confirmación por WhatsApp.
+            </p>
+
+            {/* 💡 Código + acción */}
+            <div className="mt-4 rounded-xl border border-amber-500/30 bg-black/50 p-4">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400/80">
+                Tu código de orden
+              </p>
+
+              <p className="mt-2 font-mono text-2xl font-black tracking-wider text-red-400">
+                {order.code}
+              </p>
+
+              <div className="mt-3 flex items-start gap-2 rounded-lg bg-amber-950/20 px-3 py-2">
+                <span className="text-base"></span>
+                <p className="text-[11px] leading-relaxed text-amber-200/90">
+                  <b>Recomendación:</b> toma una captura de pantalla de esta
+                  sección. Así tendrás el código a mano cuando lo necesites.
+                </p>
+              </div>
+
+              <Link
+                href="/mi-orden"
+                className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-red-700 via-red-600 to-red-500 px-4 py-3 text-xs font-black uppercase tracking-wider text-white shadow-lg shadow-red-900/40 transition hover:from-red-600 hover:to-red-500 active:scale-[0.98]"
+              >
+                🔍 Consultar estado de mi orden
+              </Link>
+            </div>
+
+            <p className="mt-3 text-[11px] leading-relaxed text-white/40">
+              En Mi Orden, ingresa el código de arriba junto con tu número de
+              teléfono para ver si tu pago ya fue verificado.
             </p>
           </div>
         </div>
       </div>
 
-      {/* Ticket con QR (el QR se activa cuando verifican) */}
+      {/* Ticket con QR (bloqueado hasta verificación) */}
       <div className="mx-auto w-full max-w-md overflow-hidden rounded-3xl border border-red-950/60 bg-neutral-950 shadow-2xl shadow-red-950/30">
         {/* Header */}
         <div className="relative px-5 py-6 text-white sm:px-6">
@@ -76,21 +105,34 @@ export default function Step4Confirmation({
           </div>
         </div>
 
-        {/* QR */}
+        {/* QR bloqueado */}
         <div className="flex flex-col items-center gap-4 border-b border-dashed border-red-950/60 bg-red-950/5 px-5 py-7 sm:px-6 sm:py-8">
-          <div className="w-full max-w-[230px] rounded-2xl bg-white p-4 opacity-40 shadow-lg shadow-red-950/40">
-            <QRCodeSVG
-              value={qrValue}
-              size={256}
-              level="M"
-              marginSize={0}
-              bgColor="#FFFFFF"
-              fgColor="#000000"
-              className="h-auto w-full"
-            />
+          <div className="relative w-full max-w-[230px]">
+            {/* QR atenuado */}
+            <div className="rounded-2xl bg-white p-4 opacity-30 shadow-lg shadow-red-950/40 grayscale">
+              <QRCodeSVG
+                value={qrValue}
+                size={256}
+                level="M"
+                marginSize={0}
+                bgColor="#FFFFFF"
+                fgColor="#000000"
+                className="h-auto w-full"
+              />
+            </div>
+
+            {/* Overlay con candado */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center rounded-2xl bg-black/50 backdrop-blur-[1px]">
+              <span className="text-4xl drop-shadow-lg"></span>
+              <p className="mt-3 rounded-full border border-amber-500/40 bg-black/90 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-amber-300">
+                Aún no activo
+              </p>
+            </div>
           </div>
-          <p className="text-center text-xs text-white/50">
-            Tu QR se activará al confirmarse el pago
+
+          <p className="max-w-[280px] text-center text-xs leading-relaxed text-white/60">
+            Tu QR se activará <b className="text-white">automáticamente</b>{' '}
+            cuando verifiquemos tu pago.
           </p>
         </div>
 
@@ -135,7 +177,8 @@ export default function Step4Confirmation({
 
       <p className="text-center text-[11px] text-white/40">
         💡 Guarda tu código <b className="text-red-400">{order.code}</b> para
-        consultar tu orden en cualquier momento desde "Mi orden".
+        consultar tu orden en cualquier momento desde{' '}
+        <span className="text-white/60">&ldquo;Mi orden&rdquo;</span>.
       </p>
     </div>
   );
