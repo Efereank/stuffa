@@ -3,23 +3,24 @@
 import Link from 'next/link';
 import { QRCodeSVG } from 'qrcode.react';
 import {
-  formatBs,
   formatCurrency,
   formatLongDate,
   formatTime,
 } from '@/lib/utils';
 import type { OrderDetail } from '@/lib/types';
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? '';
-
 export default function Step4Confirmation({
   order,
 }: {
   order: OrderDetail;
 }) {
-  const qrValue = SITE_URL
-    ? `${SITE_URL}/orden/${order.qr_token}`
-    : `/orden/${order.qr_token}`;
+  // 🎯 Obtener el dominio actual desde el navegador (funciona con cualquier dominio)
+  const siteUrl =
+    typeof window !== 'undefined'
+      ? window.location.origin
+      : process.env.NEXT_PUBLIC_SITE_URL ?? '';
+
+  const qrValue = `${siteUrl}/orden/${order.qr_token}`;
 
   return (
     <div className="space-y-6">
@@ -47,7 +48,9 @@ export default function Step4Confirmation({
             </p>
             <p className="mt-1 text-xs text-white/60">
               Nuestro equipo revisará tu comprobante en las próximas horas.
-              Guarda este código <b className="text-red-400">{order.code}</b> para consultar tu orden en cualquier momento desde "Mi orden".
+              Guarda este código{' '}
+              <b className="text-red-400">{order.code}</b> para consultar tu
+              orden en cualquier momento desde &ldquo;Mi orden&rdquo;.
             </p>
           </div>
         </div>
@@ -133,9 +136,10 @@ export default function Step4Confirmation({
         </Link>
       </div>
 
-      <p className="text-center text-[11px] text-white/70">
+      <p className="text-center text-[11px] text-white/40">
         💡 Guarda tu código <b className="text-red-400">{order.code}</b> para
-        consultar tu orden en cualquier momento desde "Mi orden".
+        consultar tu orden en cualquier momento desde{' '}
+        <span className="text-white/60">&ldquo;Mi orden&rdquo;</span>.
       </p>
     </div>
   );
