@@ -49,8 +49,7 @@ export default function Step4Confirmation({
             <p className="mt-1 text-xs text-white/60">
               Nuestro equipo revisará tu comprobante en las próximas horas.
               Guarda este código{' '}
-              <b className="text-red-400">{order.code}</b> para consultar tu
-              orden en cualquier momento desde &ldquo;Mi orden&rdquo;.
+              <b className="text-red-400">{order.code}</b> para consultar en cualquier momento desde &ldquo;Mi orden&rdquo;.
             </p>
           </div>
         </div>
