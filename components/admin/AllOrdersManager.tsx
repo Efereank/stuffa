@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import OrderVerificationModal from './OrderVerificationModal';
 import { cn, formatLongDate } from '@/lib/utils';
-import type { AdminOrderRow, AdminOrderWithEvent, OrderStatus } from '@/lib/types';
+import type { AdminOrderWithEvent, OrderStatus } from '@/lib/types';
 
 type FilterKey = OrderStatus | 'all' | 'needs_action';
 
@@ -327,16 +327,18 @@ export default function AllOrdersManager({
       )}
 
       {/* Modal */}
-      {selected && (
-        <OrderVerificationModal
-          order={selected as AdminOrderRow}
-          onClose={() => setSelected(null)}
-          onSaved={() => {
-            setSelected(null);
-            void refresh();
-          }}
-        />
-      )}
+    {selected && (
+      <OrderVerificationModal
+        order={selected}
+        eventName={selected.event_name}
+        eventDate={selected.event_date}
+        onClose={() => {
+          setSelected(null);
+          void refresh();
+        }}
+        onSaved={() => void refresh()}
+      />
+    )}
     </>
   );
 }

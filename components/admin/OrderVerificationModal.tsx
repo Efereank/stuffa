@@ -3,16 +3,22 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
+import {
+  buildWhatsAppMessage,
+  buildWhatsAppUrl,
+} from '@/lib/whatsapp';
 import { cn, formatBs, formatCurrency, formatLongDate } from '@/lib/utils';
-import type { AdminOrderRow } from '@/lib/types';
+import type { AdminOrderRow, OrderStatus } from '@/lib/types';
 
 interface OrderVerificationModalProps {
   order: AdminOrderRow;
+  eventName?: string;
+  eventDate?: string;
   onClose: () => void;
   onSaved: () => void;
 }
 
-const STATUS_LABEL: Record<string, string> = {
+const STATUS_LABEL: Record<OrderStatus, string> = {
   pending: 'Sin pago subido',
   payment_uploaded: 'Por verificar',
   verified: 'Verificada',
@@ -23,6 +29,8 @@ const STATUS_LABEL: Record<string, string> = {
 
 export default function OrderVerificationModal({
   order,
+  eventName,
+  eventDate,
   onClose,
   onSaved,
 }: OrderVerificationModalProps) {
@@ -30,11 +38,29 @@ export default function OrderVerificationModal({
   const [error, setError] = useState<string | null>(null);
   const [rejectMode, setRejectMode] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
+  const [status, setStatus] = useState<OrderStatus>(order.status);
 
-  const canVerify =
-    order.status === 'payment_uploaded' || order.status === 'pending';
-  const canReject =
-    order.status !== 'checked_in' && order.status !== 'cancelled';
+  const canVerify = status === 'payment_uploaded' || status === 'pending';
+  const canReject = status !== 'checked_in' && status !== 'cancelled';
+  const canSendWhatsApp = status === 'verified' || status === 'checked_in';
+
+  // 🎯 Construir la URL de WhatsApp con el mensaje
+  const siteUrl =
+    typeof window !== 'undefined'
+      ? window.location.origin
+      : process.env.NEXT_PUBLIC_SITE_URL ?? '';
+
+  const whatsappMessage = buildWhatsAppMessage({
+    customerName: order.customer_name,
+    orderCode: order.code,
+    qrToken: order.qr_token,
+    quantity: order.quantity,
+    eventName,
+    eventDate,
+    siteUrl,
+  });
+
+  const whatsappUrl = buildWhatsAppUrl(order.customer_phone, whatsappMessage);
 
   async function handleVerify() {
     setLoading(true);
@@ -52,6 +78,9 @@ export default function OrderVerificationModal({
       return;
     }
 
+    // Actualizar estado local — el modal NO se cierra
+    setStatus('verified');
+    // Refrescar lista del padre en segundo plano
     onSaved();
   }
 
@@ -77,6 +106,7 @@ export default function OrderVerificationModal({
       return;
     }
 
+    setStatus('rejected');
     onSaved();
   }
 
@@ -105,24 +135,35 @@ export default function OrderVerificationModal({
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-5">
+          {/* Success banner cuando se acaba de verificar */}
+          {status === 'verified' && (
+            <div className="mb-4 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3">
+              <p className="flex items-center gap-2 text-sm font-bold text-emerald-300">
+                ✅ Pago verificado
+              </p>
+              <p className="mt-1 text-xs text-emerald-200/80">
+                Ahora puedes enviarle el QR por WhatsApp al cliente.
+              </p>
+            </div>
+          )}
+
           {/* Estado */}
           <div className="mb-4 rounded-xl border border-red-950/60 bg-black/40 px-4 py-3">
             <p className="text-[10px] uppercase tracking-wide text-white/40">
               Estado actual
             </p>
             <p className="mt-1 text-sm font-bold text-white">
-              {STATUS_LABEL[order.status] ?? order.status}
+              {STATUS_LABEL[status]}
             </p>
-            {order.rejection_reason && (
+            {order.rejection_reason && status === 'rejected' && (
               <p className="mt-2 text-xs text-red-300">
-                Motivo del rechazo: {order.rejection_reason}
+                Motivo: {order.rejection_reason}
               </p>
             )}
           </div>
 
           {/* Grid de datos */}
           <div className="grid gap-4 sm:grid-cols-2">
-            {/* Datos del cliente */}
             <div className="space-y-3 rounded-xl border border-red-950/60 bg-black/40 p-4">
               <h3 className="text-[10px] font-bold uppercase tracking-widest text-red-500">
                 Cliente
@@ -135,7 +176,6 @@ export default function OrderVerificationModal({
               )}
             </div>
 
-            {/* Datos de la orden */}
             <div className="space-y-3 rounded-xl border border-red-950/60 bg-black/40 p-4">
               <h3 className="text-[10px] font-bold uppercase tracking-widest text-red-500">
                 Orden
@@ -163,16 +203,12 @@ export default function OrderVerificationModal({
               />
             </div>
 
-            {/* Datos de pago */}
             <div className="space-y-3 rounded-xl border border-red-950/60 bg-black/40 p-4 sm:col-span-2">
               <h3 className="text-[10px] font-bold uppercase tracking-widest text-red-500">
                 Pago
               </h3>
               <div className="grid gap-3 sm:grid-cols-3">
-                <InfoRow
-                  label="Método"
-                  value={order.payment_method ?? '—'}
-                />
+                <InfoRow label="Método" value={order.payment_method ?? '—'} />
                 <InfoRow
                   label="Referencia"
                   value={order.payment_reference ?? '—'}
@@ -226,9 +262,7 @@ export default function OrderVerificationModal({
             </div>
           ) : (
             <div className="mt-4 rounded-xl border border-dashed border-red-950/60 bg-black/40 px-4 py-6 text-center">
-              <p className="text-xs text-white/40">
-                Sin comprobante subido
-              </p>
+              <p className="text-xs text-white/40">Sin comprobante subido</p>
             </div>
           )}
 
@@ -293,34 +327,38 @@ export default function OrderVerificationModal({
                 Cerrar
               </button>
 
-              {canVerify || canReject ? (
-                <div className="flex flex-col-reverse gap-2 sm:flex-row">
-                  {canReject && (
-                    <button
-                      type="button"
-                      onClick={() => setRejectMode(true)}
-                      disabled={loading}
-                      className="min-h-[44px] rounded-xl border border-red-500/40 bg-red-950/20 px-5 py-2.5 text-sm font-bold uppercase tracking-wider text-red-300 transition hover:bg-red-950/40 disabled:opacity-60"
-                    >
-                      Rechazar
-                    </button>
-                  )}
-                  {canVerify && (
-                    <button
-                      type="button"
-                      onClick={handleVerify}
-                      disabled={loading}
-                      className="min-h-[44px] rounded-xl bg-gradient-to-r from-emerald-700 via-emerald-600 to-emerald-500 px-5 py-2.5 text-sm font-black uppercase tracking-wider text-white shadow-lg shadow-emerald-900/40 transition hover:from-emerald-600 hover:to-emerald-500 disabled:opacity-60"
-                    >
-                      {loading ? 'Verificando…' : '✓ Verificar pago'}
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <span className="self-center text-xs text-white/40">
-                  Esta orden ya fue procesada
-                </span>
-              )}
+              <div className="flex flex-col-reverse gap-2 sm:flex-row">
+                {canReject && (
+                  <button
+                    type="button"
+                    onClick={() => setRejectMode(true)}
+                    disabled={loading}
+                    className="min-h-[44px] rounded-xl border border-red-500/40 bg-red-950/20 px-5 py-2.5 text-sm font-bold uppercase tracking-wider text-red-300 transition hover:bg-red-950/40 disabled:opacity-60"
+                  >
+                    Rechazar
+                  </button>
+                )}
+                {canVerify && (
+                  <button
+                    type="button"
+                    onClick={handleVerify}
+                    disabled={loading}
+                    className="min-h-[44px] rounded-xl bg-gradient-to-r from-emerald-700 via-emerald-600 to-emerald-500 px-5 py-2.5 text-sm font-black uppercase tracking-wider text-white shadow-lg shadow-emerald-900/40 transition hover:from-emerald-600 hover:to-emerald-500 disabled:opacity-60"
+                  >
+                    {loading ? 'Verificando…' : '✓ Verificar pago'}
+                  </button>
+                )}
+                {canSendWhatsApp && (
+                  <a
+                    href={whatsappUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 via-emerald-500 to-emerald-400 px-5 py-2.5 text-sm font-black uppercase tracking-wider text-white shadow-lg shadow-emerald-900/40 transition hover:from-emerald-500 hover:to-emerald-400 active:scale-[0.98]"
+                  >
+                    📱 Enviar QR por WhatsApp
+                  </a>
+                )}
+              </div>
             </div>
           )}
         </div>

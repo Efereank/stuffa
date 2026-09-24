@@ -131,10 +131,12 @@ export default async function AdminEventDetailPage({
 
         {/* Lista de órdenes */}
         <div className="mt-6">
-          <EventOrdersManager
-            eventId={id}
-            initialOrders={orders}
-          />
+        <EventOrdersManager
+          eventId={id}
+          eventName={event.name}
+          eventDate={event.event_date}
+          initialOrders={orders}
+        />
         </div>
       </main>
     </div>

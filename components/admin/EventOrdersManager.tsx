@@ -7,11 +7,13 @@ import OrderVerificationModal from './OrderVerificationModal';
 import { cn } from '@/lib/utils';
 import type { AdminOrderRow, OrderStatus } from '@/lib/types';
 
+
 interface EventOrdersManagerProps {
   eventId: string;
+  eventName: string;
+  eventDate: string;
   initialOrders: AdminOrderRow[];
 }
-
 type FilterKey = OrderStatus | 'all' | 'needs_action';
 
 const FILTERS: { key: FilterKey; label: string; match: (s: OrderStatus) => boolean }[] = [
@@ -29,6 +31,8 @@ const FILTERS: { key: FilterKey; label: string; match: (s: OrderStatus) => boole
 
 export default function EventOrdersManager({
   eventId,
+  eventName,
+  eventDate,
   initialOrders,
 }: EventOrdersManagerProps) {
   const supabaseRef = useRef(createClient());
@@ -175,16 +179,18 @@ export default function EventOrdersManager({
       )}
 
       {/* Modal */}
-      {selected && (
-        <OrderVerificationModal
-          order={selected}
-          onClose={() => setSelected(null)}
-          onSaved={() => {
-            setSelected(null);
-            void refresh();
-          }}
-        />
-      )}
+{selected && (
+  <OrderVerificationModal
+    order={selected}
+    eventName={eventName}
+    eventDate={eventDate}
+    onClose={() => {
+      setSelected(null);
+      void refresh();
+    }}
+    onSaved={() => void refresh()}
+  />
+)}
     </>
   );
 }
