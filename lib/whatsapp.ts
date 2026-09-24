@@ -55,10 +55,10 @@ export function buildWhatsAppMessage({
       if (eventTime) eventLine += ` · ${formatTime(eventTime)}`;
       eventLine += ')';
     }
-    eventLine += ' fue verificado ✅';
+    eventLine += ' fue verificado ';
     lines.push(eventLine);
   } else {
-    lines.push('Tu pago fue verificado ✅');
+    lines.push('Tu pago fue verificado');
   }
 
   lines.push(
@@ -68,7 +68,7 @@ export function buildWhatsAppMessage({
     '',
     'Muéstralo en la puerta al llegar.',
     '',
-    '¡Nos vemos! 🍾',
+    '¡Nos vemos!',
     '— Stuffa Disco & Lounge',
   );
 
