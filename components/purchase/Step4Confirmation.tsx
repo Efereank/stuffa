@@ -46,7 +46,8 @@ export default function Step4Confirmation({
               Verificación en proceso
             </p>
             <p className="mt-1 text-xs leading-relaxed text-white/60">
-              Nuestro equipo revisará tu comprobante en las próximas horas. Guarda este código QR para consultar el estado de tu orden en cualquier momento.
+              Nuestro equipo revisará tu comprobante en las próximas horas.
+              Recibirás una confirmación por WhatsApp.
             </p>
           </div>
         </div>
