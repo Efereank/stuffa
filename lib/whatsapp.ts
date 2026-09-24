@@ -2,30 +2,22 @@ import { formatLongDate, formatTime } from './utils';
 
 /**
  * Limpia un número de teléfono y lo formatea para wa.me
- * Maneja formatos venezolanos:
- *   - 04125052658 → 584125052658
- *   - +584125052658 → 584125052658
- *   - 4125052658 → 584125052658
  */
 export function cleanPhoneForWhatsApp(phone: string): string {
   let cleaned = phone.replace(/\D/g, '');
 
-  // Formato local Venezuela: 04XX-XXXXXXX (11 dígitos)
   if (cleaned.length === 11 && cleaned.startsWith('04')) {
     return '58' + cleaned.slice(1);
   }
 
-  // Ya tiene código de país 58
   if (cleaned.startsWith('58') && cleaned.length >= 12) {
     return cleaned;
   }
 
-  // 10 dígitos sin código país (ej: 4125052658)
   if (cleaned.length === 10) {
     return '58' + cleaned;
   }
 
-  // Formato desconocido: devolver tal cual
   return cleaned;
 }
 
@@ -45,9 +37,7 @@ interface BuildWhatsAppMessageParams {
  */
 export function buildWhatsAppMessage({
   customerName,
-  orderCode,
   qrToken,
-  quantity,
   eventName,
   eventDate,
   eventTime,
@@ -56,10 +46,7 @@ export function buildWhatsAppMessage({
   const firstName = customerName.split(' ')[0];
   const qrUrl = `${siteUrl}/orden/${qrToken}`;
 
-  const lines: string[] = [
-    `¡Hola ${firstName}! 🎉`,
-    '',
-  ];
+  const lines: string[] = [`¡Hola ${firstName}!`, ''];
 
   if (eventName) {
     let eventLine = `Tu pago para *${eventName}*`;
@@ -93,6 +80,7 @@ export function buildWhatsAppMessage({
  */
 export function buildWhatsAppUrl(phone: string, message: string): string {
   const cleanPhone = cleanPhoneForWhatsApp(phone);
+  // encodeURIComponent maneja correctamente los emojis UTF-8
   const encodedMessage = encodeURIComponent(message);
   return `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
 }
