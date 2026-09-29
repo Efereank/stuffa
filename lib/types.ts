@@ -8,8 +8,9 @@ export type OrderStatus =
   | 'verified'
   | 'rejected'
   | 'checked_in'
+  | 'completed'
   | 'cancelled';
-
+  
 export type PaymentMethod = 'pago_movil' | 'zelle' | 'binance';
 
 export type CustomerGender = 'M' | 'F' | 'O';

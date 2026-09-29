@@ -150,3 +150,40 @@ export function translateRpcError(message: string) {
   const key = Object.keys(RPC_ERRORS).find((k) => message.includes(k));
   return key ? RPC_ERRORS[key] : 'Ocurrió un error. Intenta de nuevo.';
 }
+
+// ============================================================
+// HELPERS DE MES
+// ============================================================
+
+const MONTH_NAMES = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+];
+
+export function getMonthName(month: number): string {
+  return MONTH_NAMES[month - 1] ?? '';
+}
+
+/**
+ * Retorna el mes actual en formato { year, month }
+ */
+export function getCurrentMonth(): { year: number; month: number } {
+  const now = new Date();
+  return { year: now.getFullYear(), month: now.getMonth() + 1 };
+}
+
+/**
+ * Suma delta meses a un (year, month).
+ * delta puede ser negativo.
+ */
+export function shiftYearMonth(
+  year: number,
+  month: number,
+  delta: number,
+): { year: number; month: number } {
+  const total = year * 12 + (month - 1) + delta;
+  return {
+    year: Math.floor(total / 12),
+    month: (total % 12) + 1,
+  };
+}

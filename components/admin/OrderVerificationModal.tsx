@@ -25,6 +25,7 @@ const STATUS_LABEL: Record<OrderStatus, string> = {
   rejected: 'Rechazada',
   checked_in: 'Check-in realizado',
   cancelled: 'Cancelada',
+  completed: 'Completada',
 };
 
 export default function OrderVerificationModal({

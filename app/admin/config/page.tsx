@@ -3,19 +3,13 @@ import { createClient } from '@/lib/supabase/server';
 import AdminHeader from '@/components/admin/AdminHeader';
 import PaymentConfigForm from '@/components/admin/PaymentConfigForm';
 import type { PaymentConfig } from '@/lib/types';
+import { requireFullAccess } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminConfigPage() {
+  await requireFullAccess();
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect('/admin/login');
-
-  const { data: isStaff } = await supabase.rpc('is_staff').returns<boolean>();
-  if (!isStaff) redirect('/admin');
 
   const { data: configs } = await supabase
     .from('payment_configs')

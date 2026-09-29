@@ -37,6 +37,11 @@ const STATUS_META: Record<
     className: 'border-white/20 bg-white/5 text-white/40',
     dot: 'bg-white/30',
   },
+    completed: {
+    label: 'Completada',
+    className: 'border-sky-500/30 bg-sky-500/10 text-sky-300',
+    dot: 'bg-sky-400',
+  },
 };
 
 export default function EventOrderRow({

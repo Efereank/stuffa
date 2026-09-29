@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import AdminHeader from '@/components/admin/AdminHeader';
 import CheckInScanner from '@/components/admin/CheckInScanner';
+import { requireStaff } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,10 +12,7 @@ export default async function AdminScannerPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) redirect('/admin/login');
-
-  const { data: isStaff } = await supabase.rpc('is_staff').returns<boolean>();
-  if (!isStaff) redirect('/admin');
+  await requireStaff();
 
   return (
     <div className="min-h-screen bg-black">

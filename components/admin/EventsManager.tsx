@@ -2,19 +2,78 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import EventStatsCard from './EventStatsCard';
-import { cn } from '@/lib/utils';
+import {
+  cn,
+  formatCurrency,
+  getMonthName,
+  getCurrentMonth,
+  shiftYearMonth,
+} from '@/lib/utils';
 import type { AdminEventRow } from '@/lib/types';
 
 interface EventsManagerProps {
   events: AdminEventRow[];
+  year: number;
+  month: number;
 }
 
 type FilterKey = 'all' | 'active' | 'past' | 'pending';
 
-export default function EventsManager({ events }: EventsManagerProps) {
+/** Máximo de meses al futuro que se puede navegar */
+const MAX_MONTHS_AHEAD = 12;
+
+export default function EventsManager({
+  events,
+  year,
+  month,
+}: EventsManagerProps) {
+  const router = useRouter();
   const [filter, setFilter] = useState<FilterKey>('all');
 
+  const currentMonth = getCurrentMonth();
+  const isCurrentMonth =
+    year === currentMonth.year && month === currentMonth.month;
+
+  // ¿Estamos en el mes máximo permitido?
+  const maxFuture = shiftYearMonth(
+    currentMonth.year,
+    currentMonth.month,
+    MAX_MONTHS_AHEAD,
+  );
+  const isMaxFuture =
+    year > maxFuture.year ||
+    (year === maxFuture.year && month >= maxFuture.month);
+
+  // ¿Estamos en el mes mínimo? (por si algún día queremos limitar atrás)
+  // Deshabilitado por ahora: se puede ir atrás indefinidamente
+
+  function shiftMonth(delta: number) {
+    if (!year || !month || isNaN(year) || isNaN(month)) {
+      router.push(
+        `/admin?year=${currentMonth.year}&month=${currentMonth.month}`,
+        { scroll: false },
+      );
+      return;
+    }
+
+    const next = shiftYearMonth(year, month, delta);
+
+    // Bloquear si excede el máximo futuro
+    if (
+      next.year > maxFuture.year ||
+      (next.year === maxFuture.year && next.month > maxFuture.month)
+    ) {
+      return;
+    }
+
+    router.push(`/admin?year=${next.year}&month=${next.month}`, {
+      scroll: false,
+    });
+  }
+
+  // Filtrado por estado
   const filtered = useMemo(() => {
     const now = new Date().toISOString().slice(0, 10);
 
@@ -30,42 +89,103 @@ export default function EventsManager({ events }: EventsManagerProps) {
     }
   }, [events, filter]);
 
-  const totalEvents = events.length;
-  const totalPending = events.reduce((sum, e) => sum + e.pending_orders, 0);
-  const totalRevenue = events.reduce((sum, e) => sum + e.revenue_usd, 0);
+  // Totales del mes
+  const totals = useMemo(() => {
+    let revenue = 0;
+    let sold = 0;
+    let pending = 0;
+
+    for (const e of events) {
+      revenue += e.revenue_usd;
+      sold += e.total_sold;
+      pending += e.pending_orders;
+    }
+
+    return {
+      events: events.length,
+      revenue,
+      sold,
+      pending,
+    };
+  }, [events]);
+
+  // Etiqueta del estado del mes actual
+  const monthLabel = isCurrentMonth
+    ? 'Mes actual'
+    : isMaxFuture
+      ? 'Límite de navegación'
+      : 'Mes';
 
   return (
     <div className="space-y-5">
-      {/* Stats globales */}
+      {/* Selector de mes */}
+      <div className="flex items-center gap-3 rounded-2xl border border-red-950/60 bg-black/40 p-3 sm:p-4">
+        <button
+          type="button"
+          onClick={() => shiftMonth(-1)}
+          aria-label="Mes anterior"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-red-900/60 text-white/80 transition hover:bg-red-950/30"
+        >
+          ←
+        </button>
+
+        <div className="flex-1 text-center">
+          <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-red-500">
+            {monthLabel}
+          </p>
+          <p className="mt-0.5 text-lg font-black text-white sm:text-xl">
+            {getMonthName(month)} {year}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => shiftMonth(1)}
+          disabled={isMaxFuture}
+          aria-label="Mes siguiente"
+          className={cn(
+            'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border transition',
+            isMaxFuture
+              ? 'cursor-not-allowed border-white/5 text-white/20'
+              : 'border-red-900/60 text-white/80 hover:bg-red-950/30',
+          )}
+        >
+          →
+        </button>
+      </div>
+
+      {/* Stats del mes */}
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
         <div className="rounded-2xl border border-red-950/60 bg-black/40 p-3 sm:p-4">
           <p className="text-[10px] uppercase tracking-wide text-white/40">
             Eventos
           </p>
-          <p className="mt-1 text-2xl font-black text-white">{totalEvents}</p>
+          <p className="mt-1 text-2xl font-black text-white">
+            {totals.events}
+          </p>
         </div>
         <div className="rounded-2xl border border-red-950/60 bg-black/40 p-3 sm:p-4">
           <p className="text-[10px] uppercase tracking-wide text-white/40">
             Pendientes
           </p>
           <p className="mt-1 text-2xl font-black text-amber-400">
-            {totalPending}
+            {totals.pending}
           </p>
         </div>
         <div className="rounded-2xl border border-red-950/60 bg-black/40 p-3 sm:p-4">
           <p className="text-[10px] uppercase tracking-wide text-white/40">
-            Ingresos totales
+            Ingresos del mes
           </p>
           <p className="mt-1 text-2xl font-black text-emerald-400">
-            ${totalRevenue.toFixed(0)}
+            {formatCurrency(totals.revenue)}
           </p>
         </div>
         <div className="rounded-2xl border border-red-950/60 bg-black/40 p-3 sm:p-4">
           <p className="text-[10px] uppercase tracking-wide text-white/40">
-            Vendidos
+            Entradas vendidas
           </p>
           <p className="mt-1 text-2xl font-black text-red-400">
-            {events.reduce((sum, e) => sum + e.total_sold, 0)}
+            {totals.sold}
           </p>
         </div>
       </div>
@@ -112,11 +232,12 @@ export default function EventsManager({ events }: EventsManagerProps) {
         <div className="rounded-2xl border border-red-950/60 bg-black/40 px-6 py-16 text-center">
           <p className="text-4xl">📅</p>
           <p className="mt-4 text-lg font-bold text-white">
-            Sin eventos {filter !== 'all' ? 'en este filtro' : ''}
+            Sin eventos{' '}
+            {filter !== 'all' ? 'en este filtro' : `en ${getMonthName(month)}`}
           </p>
           <p className="mt-2 text-sm text-white/50">
             {filter === 'all'
-              ? 'Crea tu primer evento para empezar a vender entradas.'
+              ? 'Crea un evento nuevo o navega a otro mes.'
               : 'Prueba con otro filtro.'}
           </p>
           {filter === 'all' && (
@@ -124,7 +245,7 @@ export default function EventsManager({ events }: EventsManagerProps) {
               href="/admin/eventos/nuevo"
               className="mt-6 inline-block rounded-xl bg-gradient-to-r from-red-700 via-red-600 to-red-500 px-6 py-3 text-xs font-black uppercase tracking-wider text-white shadow-lg shadow-red-900/40"
             >
-              + Crear primer evento
+              + Crear evento
             </Link>
           )}
         </div>

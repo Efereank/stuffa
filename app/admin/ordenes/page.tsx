@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import AdminHeader from '@/components/admin/AdminHeader';
 import AllOrdersManager from '@/components/admin/AllOrdersManager';
 import type { AdminOrderWithEvent } from '@/lib/types';
+import { requireStaff } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,10 +13,7 @@ export default async function AdminAllOrdersPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) redirect('/admin/login');
-
-  const { data: isStaff } = await supabase.rpc('is_staff').returns<boolean>();
-  if (!isStaff) redirect('/admin');
+  await requireStaff();
 
   const { data: ordersData } = await supabase
     .rpc('admin_list_all_orders', { p_status: null })

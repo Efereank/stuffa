@@ -36,6 +36,12 @@ const STATUS_META: Record<OrderStatus, { label: string; className: string; bg: s
     className: 'border-white/20 bg-white/5 text-white/50',
     bg: 'from-neutral-600 via-neutral-700 to-neutral-800',
   },
+
+    completed: {
+    label: 'Evento finalizado',
+    className: 'border-sky-500/40 bg-sky-950/30 text-sky-300',
+    bg: 'from-sky-500 via-sky-600 to-sky-800',
+  },
 };
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? '';

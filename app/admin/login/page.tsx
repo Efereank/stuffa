@@ -29,7 +29,16 @@ export default function AdminLoginPage() {
       return;
     }
 
-    router.replace('/admin');
+    // Consultar el rol del usuario para redirigir correctamente
+    const supabaseAuth = createClient();
+    const { data: staff } = await supabaseAuth
+      .rpc('get_current_staff')
+      .single<{ role: string }>();
+
+    const role = staff?.role ?? 'hostess';
+    const destination = role === 'hostess' ? '/admin/ordenes' : '/admin';
+
+    router.replace(destination);
     router.refresh();
   }
 

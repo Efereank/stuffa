@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import AdminHeader from '@/components/admin/AdminHeader';
 import ReportsView from '@/components/admin/ReportsView';
 import type { MonthlyReport } from '@/lib/types';
+import { requireFullAccess } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,15 +12,9 @@ export default async function AdminReportsPage({
 }: {
   searchParams: Promise<{ year?: string; month?: string }>;
 }) {
+  await requireFullAccess();
+
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect('/admin/login');
-
-  const { data: isStaff } = await supabase.rpc('is_staff').returns<boolean>();
-  if (!isStaff) redirect('/admin');
 
   const params = await searchParams;
 

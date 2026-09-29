@@ -2,7 +2,14 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { cn, formatBs, formatCurrency, formatShortDate } from '@/lib/utils';
+import {
+  cn,
+  formatBs,
+  formatCurrency,
+  formatShortDate,
+  getCurrentMonth,
+  shiftYearMonth,
+} from '@/lib/utils';
 import type { MonthlyReport } from '@/lib/types';
 
 const MONTH_NAMES = [
@@ -17,6 +24,9 @@ const METHOD_LABELS: Record<string, string> = {
   sin_metodo: 'Sin método',
 };
 
+/** Máximo de meses al futuro que se puede navegar */
+const MAX_MONTHS_AHEAD = 12;
+
 interface ReportsViewProps {
   report: MonthlyReport;
   year: number;
@@ -26,28 +36,46 @@ interface ReportsViewProps {
 export default function ReportsView({ report, year, month }: ReportsViewProps) {
   const [showAllEvents, setShowAllEvents] = useState(false);
 
+  // 🛡️ Mes actual
+  const current = getCurrentMonth();
+  const isCurrentMonth =
+    year === current.year && month === current.month;
+
+  // 🎯 Límite de navegación al futuro
+  const maxFuture = shiftYearMonth(
+    current.year,
+    current.month,
+    MAX_MONTHS_AHEAD,
+  );
+  const isMaxFuture =
+    year > maxFuture.year ||
+    (year === maxFuture.year && month >= maxFuture.month);
+
   function shiftMonth(delta: number) {
-    let m = month + delta;
-    let y = year;
-    if (m > 12) {
-      m = 1;
-      y += 1;
-    } else if (m < 1) {
-      m = 12;
-      y -= 1;
+    if (!year || !month || isNaN(year) || isNaN(month)) {
+      window.location.href = `/admin/reportes?year=${current.year}&month=${current.month}`;
+      return;
     }
-    const today = new Date();
-    const isCurrentOrPast =
-      y < today.getFullYear() ||
-      (y === today.getFullYear() && m <= today.getMonth() + 1);
 
-    if (!isCurrentOrPast && delta > 0) return;
+    const next = shiftYearMonth(year, month, delta);
 
-    window.location.href = `/admin/reportes?year=${y}&month=${m}`;
+    // Bloquear si excede el máximo futuro
+    if (
+      next.year > maxFuture.year ||
+      (next.year === maxFuture.year && next.month > maxFuture.month)
+    ) {
+      return;
+    }
+
+    window.location.href = `/admin/reportes?year=${next.year}&month=${next.month}`;
   }
 
-  const isCurrentMonth =
-    year === new Date().getFullYear() && month === new Date().getMonth() + 1;
+  // Etiqueta del estado del mes
+  const monthLabel = isCurrentMonth
+    ? 'Reporte del mes actual'
+    : isMaxFuture
+      ? 'Límite de navegación'
+      : 'Reporte mensual';
 
   const attendanceRate =
     report.total_tickets_sold > 0
@@ -83,7 +111,7 @@ export default function ReportsView({ report, year, month }: ReportsViewProps) {
 
         <div className="flex-1 text-center">
           <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-red-500">
-            Reporte mensual
+            {monthLabel}
           </p>
           <p className="mt-0.5 text-lg font-black text-white sm:text-xl">
             {MONTH_NAMES[month - 1]} {year}
@@ -93,13 +121,13 @@ export default function ReportsView({ report, year, month }: ReportsViewProps) {
         <button
           type="button"
           onClick={() => shiftMonth(1)}
-          disabled={isCurrentMonth}
+          disabled={isMaxFuture}
           aria-label="Mes siguiente"
           className={cn(
-            'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border text-white/80 transition',
-            isCurrentMonth
+            'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border transition',
+            isMaxFuture
               ? 'cursor-not-allowed border-white/5 text-white/20'
-              : 'border-red-900/60 hover:bg-red-950/30',
+              : 'border-red-900/60 text-white/80 hover:bg-red-950/30',
           )}
         >
           →
@@ -267,7 +295,6 @@ export default function ReportsView({ report, year, month }: ReportsViewProps) {
                   href={`/admin/eventos/${ev.id}`}
                   className="flex flex-wrap items-center gap-3 rounded-xl border border-red-950/60 bg-black/40 p-3 transition hover:border-red-800 hover:bg-red-950/20"
                 >
-                  {/* Rank */}
                   <span
                     className={cn(
                       'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-black',
@@ -283,7 +310,6 @@ export default function ReportsView({ report, year, month }: ReportsViewProps) {
                     {i + 1}
                   </span>
 
-                  {/* Nombre + fecha */}
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-bold text-white">
                       {ev.name}
@@ -293,7 +319,6 @@ export default function ReportsView({ report, year, month }: ReportsViewProps) {
                     </p>
                   </div>
 
-                  {/* Progress mini */}
                   <div className="hidden min-w-[100px] shrink-0 sm:block">
                     <div className="h-1.5 overflow-hidden rounded-full bg-white/5">
                       <div
@@ -306,7 +331,6 @@ export default function ReportsView({ report, year, month }: ReportsViewProps) {
                     </p>
                   </div>
 
-                  {/* Stats */}
                   <div className="shrink-0 text-right">
                     <p className="text-sm font-black text-white">
                       {formatCurrency(ev.revenue)}
