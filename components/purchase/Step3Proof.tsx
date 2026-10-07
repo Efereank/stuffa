@@ -32,6 +32,7 @@ export default function Step3Proof({
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -47,7 +48,6 @@ export default function Step3Proof({
     setFile(f);
     setError(null);
 
-    // Preview
     const url = URL.createObjectURL(f);
     setPreviewUrl(url);
   }
@@ -69,7 +69,6 @@ export default function Step3Proof({
     setUploading(true);
 
     try {
-      // 1. Subir imagen
       const formData = new FormData();
       formData.append('file', file);
 
@@ -86,7 +85,6 @@ export default function Step3Proof({
         return;
       }
 
-      // 2. Actualizar orden
       const supabase = createClient();
       const { error: rpcError } = await supabase.rpc('upload_payment_proof', {
         p_access_token: accessToken,
@@ -107,6 +105,37 @@ export default function Step3Proof({
       setError('Error de conexión. Intenta de nuevo.');
       setUploading(false);
     }
+  }
+
+  async function handleCancel() {
+    const confirmed = confirm(
+      '¿Cancelar esta compra? Se liberará la entrada que estabas reservando.',
+    );
+    if (!confirmed) return;
+
+    setCancelling(true);
+
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .rpc('cancel_order_by_customer', { p_token: accessToken })
+      .single<{ status: string; code?: string }>();
+
+    console.log('[cancel] resultado:', data, error);
+
+    if (error) {
+      alert('No se pudo cancelar. Intenta de nuevo.');
+      setCancelling(false);
+      return;
+    }
+
+    if (data?.status === 'already_processed') {
+      alert('Esta orden ya fue verificada y no se puede cancelar.');
+      setCancelling(false);
+      return;
+    }
+
+    const eventUrl = window.location.pathname.replace(/\/comprar.*$/, '');
+    window.location.href = eventUrl;
   }
 
   return (
@@ -243,6 +272,18 @@ export default function Step3Proof({
           )}
         >
           {uploading ? 'Subiendo…' : 'Verificar pago →'}
+        </button>
+      </div>
+
+      {/* Botón cancelar compra */}
+      <div className="border-t border-red-950/40 pt-4 text-center">
+        <button
+          type="button"
+          onClick={handleCancel}
+          disabled={uploading || cancelling}
+          className="text-[11px] text-white/40 underline-offset-2 transition hover:text-red-400 hover:underline disabled:opacity-50"
+        >
+          {cancelling ? 'Cancelando…' : 'Cancelar esta compra'}
         </button>
       </div>
     </form>

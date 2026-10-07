@@ -23,6 +23,26 @@ interface PurchaseFlowProps {
   exchangeRate: number;
 }
 
+/**
+ * Compara 2 objetos de datos del cliente
+ */
+function isSameCustomerData(
+  a: Step1DataShape,
+  b: Step1DataShape,
+): boolean {
+  return (
+    a.name === b.name &&
+    a.cedula === b.cedula &&
+    a.phone === b.phone &&
+    a.email === b.email &&
+    a.age === b.age &&
+    a.gender === b.gender &&
+    a.quantity === b.quantity &&
+    a.menCount === b.menCount &&
+    a.womenCount === b.womenCount
+  );
+}
+
 export default function PurchaseFlow({
   event,
   paymentMethods,
@@ -47,8 +67,30 @@ export default function PurchaseFlow({
   const totalBs = totalUsd * exchangeRate;
 
   async function handleStep1Submit(formData: Step1DataShape) {
-    setData(formData);
     setError(null);
+
+    // ============================================================
+    // 🎯 Si ya existe una orden y los datos NO cambiaron, reutilizarla
+    // ============================================================
+    if (createdOrder && data && isSameCustomerData(data, formData)) {
+      setData(formData);
+      setStep(2);
+      return;
+    }
+
+    // ============================================================
+    // 🎯 Si los datos cambiaron, cancelar la orden anterior antes de crear otra
+    // ============================================================
+    if (createdOrder) {
+      const supabaseCancel = createClient();
+      await supabaseCancel
+        .from('orders')
+        .update({ status: 'cancelled' })
+        .eq('id', createdOrder.id)
+        .eq('status', 'pending'); // solo si aún está pendiente
+    }
+
+    setData(formData);
     setLoading(true);
 
     const supabase = createClient();
@@ -116,6 +158,13 @@ export default function PurchaseFlow({
           </p>
         )}
 
+        {loading && (
+          <div className="mb-5 flex items-center gap-3 rounded-lg border border-sky-500/30 bg-sky-950/20 px-4 py-3 text-sm text-sky-300">
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-sky-400 border-t-transparent" />
+            Procesando…
+          </div>
+        )}
+
         {step === 1 && (
           <Step1Data
             event={event}
@@ -130,6 +179,7 @@ export default function PurchaseFlow({
             methods={paymentMethods}
             totalUsd={totalUsd}
             exchangeRate={exchangeRate}
+            accessToken={createdOrder?.access_token}
             onNext={handleStep2Next}
             onBack={() => setStep(1)}
           />

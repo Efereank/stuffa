@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { createClient } from '@/lib/supabase/client';
 import { cn, formatCurrency, formatBs } from '@/lib/utils';
 import type { PaymentConfig, PaymentMethod } from '@/lib/types';
 
@@ -8,6 +9,7 @@ interface Step2PaymentProps {
   methods: PaymentConfig[];
   totalUsd: number;
   exchangeRate: number;
+  accessToken?: string;
   onNext: (method: PaymentMethod) => void;
   onBack: () => void;
 }
@@ -37,11 +39,13 @@ export default function Step2Payment({
   methods,
   totalUsd,
   exchangeRate,
+  accessToken,
   onNext,
   onBack,
 }: Step2PaymentProps) {
   const [selected, setSelected] = useState<PaymentMethod | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState(false);
 
   const totalBs = totalUsd * exchangeRate;
 
@@ -49,6 +53,39 @@ export default function Step2Payment({
     navigator.clipboard.writeText(text);
     setCopied(label);
     setTimeout(() => setCopied(null), 1500);
+  }
+
+  async function handleCancel() {
+    const confirmed = confirm(
+      '¿Cancelar esta compra? Se liberará la entrada que estabas reservando.',
+    );
+    if (!confirmed) return;
+
+    setCancelling(true);
+
+    if (accessToken) {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .rpc('cancel_order_by_customer', { p_token: accessToken })
+        .single<{ status: string; code?: string }>();
+
+      console.log('[cancel] resultado:', data, error);
+
+      if (error) {
+        alert('No se pudo cancelar. Intenta de nuevo.');
+        setCancelling(false);
+        return;
+      }
+
+      if (data?.status === 'already_processed') {
+        alert('Esta orden ya fue verificada y no se puede cancelar.');
+        setCancelling(false);
+        return;
+      }
+    }
+
+    const eventUrl = window.location.pathname.replace(/\/comprar.*$/, '');
+    window.location.href = eventUrl;
   }
 
   const selectedConfig = methods.find((m) => m.method === selected);
@@ -183,6 +220,7 @@ export default function Step2Payment({
         </div>
       )}
 
+      {/* Acciones */}
       <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-between">
         <button
           type="button"
@@ -203,6 +241,18 @@ export default function Step2Payment({
           )}
         >
           Ya pagué, continuar →
+        </button>
+      </div>
+
+      {/* Botón cancelar compra */}
+      <div className="border-t border-red-950/40 pt-4 text-center">
+        <button
+          type="button"
+          onClick={handleCancel}
+          disabled={cancelling}
+          className="text-[11px] text-white/40 underline-offset-2 transition hover:text-red-400 hover:underline disabled:opacity-50"
+        >
+          {cancelling ? 'Cancelando…' : 'Cancelar esta compra'}
         </button>
       </div>
     </div>
