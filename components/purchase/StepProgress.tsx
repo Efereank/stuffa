@@ -4,8 +4,8 @@ import { cn } from '@/lib/utils';
 
 const STEPS = [
   { number: 1, label: 'Datos' },
-  { number: 2, label: 'Pago' },
-  { number: 3, label: 'Verificación' },
+  { number: 2, label: 'Consumo' },      // 👈 NUEVO
+  { number: 3, label: 'Pago' },         // 👈 antes era "Verificación"
   { number: 4, label: 'Confirmación' },
 ];
 

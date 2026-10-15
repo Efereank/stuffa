@@ -131,6 +131,13 @@ export const RPC_ERRORS: Record<string, string> = {
   INVALID_CEDULA: 'Ingresa una cédula válida.',
   INVALID_QUANTITY: 'La cantidad de entradas no es válida.',
   INVALID_PROOF: 'Debes subir una captura del comprobante.',
+
+  // 👇 NUEVOS (consumo por catálogo)
+  CONSUMPTION_REQUIRED: 'Debes agregar al menos un producto de consumo.',
+  CONSUMPTION_BELOW_MINIMUM: 'El consumo mínimo es $10 por persona.',
+  PRODUCT_NOT_FOUND: 'Uno de los productos ya no está disponible. Actualiza tu carrito.',
+  INVALID_ITEM_QUANTITY: 'La cantidad de un producto no es válida.',
+
   UNDERAGE: 'Debes ser mayor de 18 años.',
   DISTRIBUTION_MISMATCH: 'La distribución de hombres/mujeres no coincide con la cantidad total.',
   EVENT_NOT_FOUND: 'El evento ya no está disponible.',
