@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import {
@@ -8,7 +8,7 @@ import {
   buildWhatsAppUrl,
 } from '@/lib/whatsapp';
 import { cn, formatBs, formatCurrency, formatLongDate } from '@/lib/utils';
-import type { AdminOrderRow, OrderStatus } from '@/lib/types';
+import type { AdminOrderRow, ConsumptionItem, OrderStatus } from '@/lib/types';
 
 interface OrderVerificationModalProps {
   order: AdminOrderRow;
@@ -41,9 +41,41 @@ export default function OrderVerificationModal({
   const [rejectReason, setRejectReason] = useState('');
   const [status, setStatus] = useState<OrderStatus>(order.status);
 
+  // 👇 NUEVO: items de consumo
+  const [consumptionItems, setConsumptionItems] = useState<ConsumptionItem[]>([]);
+  const [loadingItems, setLoadingItems] = useState(true);
+
   const canVerify = status === 'payment_uploaded' || status === 'pending';
   const canReject = status !== 'checked_in' && status !== 'cancelled';
   const canSendWhatsApp = status === 'verified' || status === 'checked_in';
+
+  // 👇 NUEVO: cargar items de consumo al abrir el modal
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadItems() {
+      const supabase = createClient();
+      const { data, error: rpcError } = await supabase
+        .rpc('admin_get_order_consumption_items', { p_order_id: order.id })
+        .single<ConsumptionItem[]>();
+
+      if (!mounted) return;
+
+      if (rpcError) {
+        console.error('[admin_get_order_consumption_items]', rpcError);
+        setLoadingItems(false);
+        return;
+      }
+
+      setConsumptionItems(Array.isArray(data) ? data : []);
+      setLoadingItems(false);
+    }
+
+    loadItems();
+    return () => {
+      mounted = false;
+    };
+  }, [order.id]);
 
   // 🎯 Construir la URL de WhatsApp con el mensaje
   const siteUrl =
@@ -79,9 +111,7 @@ export default function OrderVerificationModal({
       return;
     }
 
-    // Actualizar estado local — el modal NO se cierra
     setStatus('verified');
-    // Refrescar lista del padre en segundo plano
     onSaved();
   }
 
@@ -111,6 +141,15 @@ export default function OrderVerificationModal({
     onSaved();
   }
 
+  // Total de items (cantidad de productos)
+  const itemsCount = consumptionItems.reduce((s, i) => s + i.quantity, 0);
+
+  // Total en USD de los productos (verificación cruzada)
+  const itemsTotalUsd = consumptionItems.reduce(
+    (s, i) => s + i.subtotal_usd,
+    0,
+  );
+
   return (
     <div className="fixed inset-0 z-50 flex bg-black/80 backdrop-blur-sm animate-fade-in sm:items-center sm:justify-center sm:p-4">
       <div className="flex h-full w-full flex-col bg-neutral-950 sm:max-h-[95vh] sm:max-w-3xl sm:rounded-3xl sm:border sm:border-red-950/60 sm:shadow-2xl">
@@ -136,7 +175,7 @@ export default function OrderVerificationModal({
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-5">
-          {/* Success banner cuando se acaba de verificar */}
+          {/* Success banner */}
           {status === 'verified' && (
             <div className="mb-4 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3">
               <p className="flex items-center gap-2 text-sm font-bold text-emerald-300">
@@ -232,6 +271,75 @@ export default function OrderVerificationModal({
                 />
               </div>
             </div>
+          </div>
+
+          {/* 👇 NUEVO: Consumo (productos comprados) */}
+          <div className="mt-4 rounded-xl border border-red-950/60 bg-black/40 p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-[10px] font-bold uppercase tracking-widest text-red-500">
+                🍾 Consumo comprado
+              </h3>
+              {itemsCount > 0 && (
+                <span className="rounded-full border border-red-500/40 bg-red-950/30 px-2.5 py-0.5 text-[10px] font-bold text-red-300">
+                  {itemsCount} {itemsCount === 1 ? 'producto' : 'productos'}
+                </span>
+              )}
+            </div>
+
+            {loadingItems ? (
+              <div className="flex items-center gap-2 py-4 text-xs text-white/40">
+                <span className="h-3 w-3 animate-spin rounded-full border-2 border-white/40 border-t-transparent" />
+                Cargando productos…
+              </div>
+            ) : consumptionItems.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-red-950/60 px-4 py-4 text-center">
+                <p className="text-xs text-white/40">
+                  Sin productos de consumo en esta orden
+                </p>
+              </div>
+            ) : (
+              <>
+                <ul className="space-y-2">
+                  {consumptionItems.map((item, idx) => (
+                    <li
+                      key={idx}
+                      className="flex items-center justify-between gap-3 rounded-lg border border-red-950/40 bg-black/40 px-3 py-2.5"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-bold text-white">
+                          {item.product_name}
+                        </p>
+                        <p className="mt-0.5 text-[10px] uppercase tracking-wide text-white/40">
+                          {item.product_category} · {item.quantity} ×{' '}
+                          {formatCurrency(item.unit_price_usd)}
+                        </p>
+                      </div>
+                      <span className="shrink-0 text-sm font-black text-red-400">
+                        {formatCurrency(item.subtotal_usd)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+
+                {/* Totales de consumo */}
+                <div className="mt-3 space-y-1.5 border-t border-red-950/60 pt-3 text-sm">
+                  <div className="flex items-center justify-between text-white/60">
+                    <span className="text-xs">Subtotal consumo USD</span>
+                    <span className="font-bold text-white">
+                      {formatCurrency(itemsTotalUsd)}
+                    </span>
+                  </div>
+                  {order.consumption_total_bs > 0 && (
+                    <div className="flex items-center justify-between text-white/60">
+                      <span className="text-xs">Consumo Bs.</span>
+                      <span className="font-mono text-white">
+                        {formatBs(order.consumption_total_bs)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
           </div>
 
           {/* Comprobante */}

@@ -10,10 +10,44 @@ export type OrderStatus =
   | 'checked_in'
   | 'completed'
   | 'cancelled';
-  
+
 export type PaymentMethod = 'pago_movil' | 'zelle' | 'binance';
 
 export type CustomerGender = 'M' | 'F' | 'O';
+
+// ------------------------------------------------------------
+// CONSUMO (productos)
+// ------------------------------------------------------------
+
+export type ConsumptionCategory =
+  | 'licores'
+  | 'cervezas'
+  | 'shots'
+  | 'refrescos'
+  | 'snacks'
+  | 'combos';
+
+/** Producto del catálogo (con precio del evento ya aplicado) */
+export interface ConsumptionProduct {
+  id: string;
+  name: string;
+  description: string | null;
+  category: ConsumptionCategory;
+  price_usd: number;        // precio final (override del evento o base)
+  image_url: string | null;
+  is_recommended: boolean;
+  sort_order: number;
+}
+
+/** Item del carrito (snapshot guardado en la orden) */
+export interface ConsumptionItem {
+  product_id: string;
+  product_name: string;
+  product_category: ConsumptionCategory;
+  unit_price_usd: number;
+  quantity: number;
+  subtotal_usd: number;
+}
 
 // ------------------------------------------------------------
 // EVENTOS
@@ -91,6 +125,9 @@ export interface CreatedOrder {
   total_usd: number;
   total_bs: number;
   exchange_rate: number;
+  consumption_unit_usd: number;
+  consumption_total_usd: number;
+  consumption_total_bs: number;
   event_name: string;
   event_date: string;
   event_time: string;
@@ -110,6 +147,10 @@ export interface OrderDetail {
   total_usd: number;
   total_bs: number | null;
   exchange_rate: number | null;
+  consumption_unit_usd: number;
+  consumption_total_usd: number;
+  consumption_total_bs: number;
+  consumption_items: ConsumptionItem[];
   payment_method: PaymentMethod | null;
   payment_reference: string | null;
   payment_proof_url: string | null;
@@ -168,6 +209,9 @@ export interface AdminOrderRow {
   women_count: number;
   total_usd: number;
   total_bs: number | null;
+  consumption_unit_usd: number;
+  consumption_total_usd: number;
+  consumption_total_bs: number;
   payment_method: PaymentMethod | null;
   payment_reference: string | null;
   payment_proof_url: string | null;
@@ -187,14 +231,51 @@ export interface AdminOrderWithEvent extends AdminOrderRow {
   event_date: string;
 }
 
+/** Producto en el panel admin (sin override de evento, con base_price) */
+export interface AdminConsumptionProduct {
+  id: string;
+  name: string;
+  description: string | null;
+  category: ConsumptionCategory;
+  base_price_usd: number;
+  image_url: string | null;
+  is_recommended: boolean;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
 // ------------------------------------------------------------
 // CHECK-IN
 // ------------------------------------------------------------
 
 export type CheckInResult =
-  | { status: 'ok'; code: string; customer_name: string; quantity: number; event_name: string }
-  | { status: 'already_checked_in'; code: string; customer_name: string; quantity: number; checked_in_at: string; event_name: string }
-  | { status: 'not_verified'; code: string; customer_name: string; current_status: OrderStatus }
+  | {
+      status: 'ok';
+      code: string;
+      customer_name: string;
+      quantity: number;
+      event_name: string;
+      consumption_total_usd: number;
+      consumption_items: ConsumptionItem[];
+    }
+  | {
+      status: 'already_checked_in';
+      code: string;
+      customer_name: string;
+      quantity: number;
+      checked_in_at: string;
+      event_name: string;
+      consumption_total_usd: number;
+      consumption_items: ConsumptionItem[];
+    }
+  | {
+      status: 'not_verified';
+      code: string;
+      customer_name: string;
+      current_status: OrderStatus;
+    }
   | { status: 'not_found' };
 
 // ------------------------------------------------------------

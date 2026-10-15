@@ -54,6 +54,11 @@ export default function OrderDetailView({ order }: { order: OrderDetail }) {
   const meta = STATUS_META[order.status];
   const showQr = order.status === 'verified' || order.status === 'checked_in';
 
+  const itemsCount = order.consumption_items?.reduce(
+    (s, i) => s + i.quantity,
+    0,
+  ) ?? 0;
+
   return (
     <div className="mx-auto w-full max-w-md overflow-hidden rounded-3xl border border-red-950/60 bg-neutral-950 shadow-2xl shadow-red-950/30">
       {/* Header */}
@@ -133,6 +138,33 @@ export default function OrderDetailView({ order }: { order: OrderDetail }) {
           <Row label="Referencia" value={order.payment_reference} />
         )}
       </dl>
+
+      {/* Desglose de productos */}
+      {order.consumption_items && order.consumption_items.length > 0 && (
+        <div className="border-t border-dashed border-red-950/60 px-5 py-4 sm:px-6">
+          <p className="mb-2 flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-red-500">
+            <span>Consumo</span>
+            {itemsCount > 0 && (
+              <span className="text-white/40">
+                {itemsCount} {itemsCount === 1 ? 'producto' : 'productos'}
+              </span>
+            )}
+          </p>
+          <ul className="space-y-1.5 text-xs">
+            {order.consumption_items.map((item, idx) => (
+              <li key={idx} className="flex items-center justify-between gap-3">
+                <span className="min-w-0 flex-1 truncate text-white/70">
+                  <b className="text-white">{item.quantity}×</b>{' '}
+                  {item.product_name}
+                </span>
+                <span className="shrink-0 font-bold text-white">
+                  {formatCurrency(item.subtotal_usd)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Acciones */}
       <div className="border-t border-red-950/40 px-5 py-4 sm:px-6">

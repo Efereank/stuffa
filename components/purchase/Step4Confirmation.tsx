@@ -22,6 +22,11 @@ export default function Step4Confirmation({
 
   const qrValue = `${siteUrl}/orden/${order.qr_token}`;
 
+  const itemsCount = order.consumption_items?.reduce(
+    (s, i) => s + i.quantity,
+    0,
+  ) ?? 0;
+
   return (
     <div className="space-y-6">
       {/* Mensaje de éxito */}
@@ -105,6 +110,12 @@ export default function Step4Confirmation({
           />
           <Row label="Hora" value={formatTime(order.event.event_time)} />
           <Row label="Cantidad" value={`${order.quantity} entradas`} />
+          {itemsCount > 0 && (
+            <Row
+              label="Consumo"
+              value={`${itemsCount} ${itemsCount === 1 ? 'producto' : 'productos'}`}
+            />
+          )}
           <Row
             label="Total"
             value={formatCurrency(order.total_usd)}
@@ -115,6 +126,31 @@ export default function Step4Confirmation({
             value={order.payment_reference ?? '—'}
           />
         </dl>
+
+        {/* Desglose de productos */}
+        {order.consumption_items && order.consumption_items.length > 0 && (
+          <div className="border-t border-dashed border-red-950/60 px-5 py-4 sm:px-6">
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-red-500">
+              Tu consumo
+            </p>
+            <ul className="space-y-1.5 text-xs">
+              {order.consumption_items.map((item, idx) => (
+                <li
+                  key={idx}
+                  className="flex items-center justify-between gap-3"
+                >
+                  <span className="min-w-0 flex-1 truncate text-white/70">
+                    <b className="text-white">{item.quantity}×</b>{' '}
+                    {item.product_name}
+                  </span>
+                  <span className="shrink-0 font-bold text-white">
+                    {formatCurrency(item.subtotal_usd)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
 
       {/* Acciones */}

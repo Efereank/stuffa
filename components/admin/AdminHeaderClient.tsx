@@ -26,6 +26,12 @@ const NAV_ITEMS: NavItem[] = [
     roles: ['admin', 'manager'],
   },
   {
+    label: 'Productos',                        // 👈 NUEVO
+    href: '/admin/productos',                  // 👈 NUEVO
+    exact: false,                              // 👈 NUEVO
+    roles: ['admin', 'manager'],               // 👈 NUEVO
+  },
+  {
     label: 'Órdenes',
     href: '/admin/ordenes',
     exact: false,

@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import SiteHeader from '@/components/layout/SiteHeader';
 import SiteFooter from '@/components/layout/Footer';
 import PurchaseFlow from '@/components/purchase/PurchaseFlow';
-import type { EventDetail, PaymentConfig } from '@/lib/types';
+import type { ConsumptionProduct, EventDetail, PaymentConfig } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -51,6 +51,14 @@ export default async function PurchasePage({
 
   const exchangeRate = await getExchangeRate();
 
+  // 👇 NUEVO: cargar catálogo de consumo del evento
+  const { data: productsData } = await supabase
+    .rpc('get_event_consumption_products', { p_event_slug: slug });
+
+  const consumptionProducts: ConsumptionProduct[] = Array.isArray(productsData)
+    ? productsData
+    : [];
+
   return (
     <>
       <SiteHeader />
@@ -68,6 +76,7 @@ export default async function PurchasePage({
             event={event}
             paymentMethods={methods}
             exchangeRate={exchangeRate}
+            consumptionProducts={consumptionProducts}
           />
         </div>
       </main>

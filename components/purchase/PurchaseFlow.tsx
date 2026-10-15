@@ -1,15 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import StepProgress from './StepProgress';
 import Step1Data, { type Step1Data as Step1DataShape } from './Step1Data';
-import Step2Payment from './Step2Payment';
-import Step3Proof from './Step3Proof';
+import Step2Consumption from './Step2Consumption';
+import Step3Payment from './Step3Payment';
 import Step4Confirmation from './Step4Confirmation';
 import { translateRpcError } from '@/lib/utils';
 import type {
+  ConsumptionProduct,
   CreatedOrder,
   EventDetail,
   OrderDetail,
@@ -21,36 +21,23 @@ interface PurchaseFlowProps {
   event: EventDetail;
   paymentMethods: PaymentConfig[];
   exchangeRate: number;
+  consumptionProducts: ConsumptionProduct[];
 }
 
-/**
- * Compara 2 objetos de datos del cliente
- */
-function isSameCustomerData(
-  a: Step1DataShape,
-  b: Step1DataShape,
-): boolean {
-  return (
-    a.name === b.name &&
-    a.cedula === b.cedula &&
-    a.phone === b.phone &&
-    a.email === b.email &&
-    a.age === b.age &&
-    a.gender === b.gender &&
-    a.quantity === b.quantity &&
-    a.menCount === b.menCount &&
-    a.womenCount === b.womenCount
-  );
+interface CartItem {
+  product_id: string;
+  quantity: number;
 }
 
 export default function PurchaseFlow({
   event,
   paymentMethods,
   exchangeRate,
+  consumptionProducts,
 }: PurchaseFlowProps) {
-  const router = useRouter();
   const [step, setStep] = useState(1);
   const [data, setData] = useState<Step1DataShape | null>(null);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
   const [createdOrder, setCreatedOrder] = useState<CreatedOrder | null>(null);
   const [finalOrder, setFinalOrder] = useState<OrderDetail | null>(null);
@@ -63,51 +50,65 @@ export default function PurchaseFlow({
   }, [step]);
 
   const ticketType = event.ticket_types[0];
-  const totalUsd = (ticketType?.price_usd ?? 0) * (data?.quantity ?? 1);
-  const totalBs = totalUsd * exchangeRate;
 
+  // ============================================================
+  // STEP 1 → STEP 2: guardar datos y pasar a consumo
+  // ============================================================
   async function handleStep1Submit(formData: Step1DataShape) {
     setError(null);
 
-    // ============================================================
-    // 🎯 Si ya existe una orden y los datos NO cambiaron, reutilizarla
-    // ============================================================
-    if (createdOrder && data && isSameCustomerData(data, formData)) {
-      setData(formData);
-      setStep(2);
-      return;
-    }
-
-    // ============================================================
-    // 🎯 Si los datos cambiaron, cancelar la orden anterior antes de crear otra
-    // ============================================================
+    // Reiniciar el consumo crea una nueva orden, así que cancelar la anterior.
     if (createdOrder) {
-      const supabaseCancel = createClient();
-      await supabaseCancel
+      const { error: cancelError } = await createClient()
         .from('orders')
         .update({ status: 'cancelled' })
         .eq('id', createdOrder.id)
-        .eq('status', 'pending'); // solo si aún está pendiente
+        .eq('status', 'pending');
+
+      if (cancelError) {
+        setError('No se pudo cancelar la orden anterior. Intenta de nuevo.');
+        return;
+      }
+
+      setCreatedOrder(null);
+      setCartItems([]);
     }
 
     setData(formData);
+    setStep(2);
+  }
+
+  // ============================================================
+  // STEP 2 → STEP 3: crear la orden con los items elegidos
+  // ============================================================
+  async function handleStep2Next(items: CartItem[]) {
+    setError(null);
     setLoading(true);
+
+    if (!data) {
+      setError('No se pudieron recuperar los datos de la compra.');
+      setLoading(false);
+      return;
+    }
+
+    setCartItems(items);
 
     const supabase = createClient();
     const { data: order, error: rpcError } = await supabase
       .rpc('create_order', {
         p_event_slug: event.slug,
         p_ticket_type_id: ticketType.id,
-        p_customer_name: formData.name,
-        p_customer_cedula: formData.cedula,
-        p_customer_email: formData.email || null,
-        p_customer_phone: formData.phone,
-        p_customer_age: formData.age,
-        p_customer_gender: formData.gender,
-        p_quantity: formData.quantity,
-        p_men_count: formData.menCount,
-        p_women_count: formData.womenCount,
+        p_customer_name: data.name,
+        p_customer_cedula: data.cedula,
+        p_customer_email: data.email || null,
+        p_customer_phone: data.phone,
+        p_customer_age: data.age,
+        p_customer_gender: data.gender,
+        p_quantity: data.quantity,
+        p_men_count: data.menCount,
+        p_women_count: data.womenCount,
         p_exchange_rate: exchangeRate,
+        p_consumption_items: items,
       })
       .single<CreatedOrder>();
 
@@ -119,15 +120,15 @@ export default function PurchaseFlow({
     }
 
     setCreatedOrder(order);
-    setStep(2);
-  }
-
-  function handleStep2Next(method: PaymentMethod) {
-    setPaymentMethod(method);
     setStep(3);
   }
 
-  async function handleStep3Next() {
+  // ============================================================
+  // STEP 3 → STEP 4: el usuario ya pagó y subió comprobante
+  // ============================================================
+  async function handleStep3Next(method: PaymentMethod) {
+    setPaymentMethod(method);
+
     if (!createdOrder) return;
     setLoading(true);
 
@@ -170,26 +171,30 @@ export default function PurchaseFlow({
             event={event}
             initialData={data ?? undefined}
             onNext={handleStep1Submit}
-            onBack={() => router.push(`/eventos/${event.slug}`)}
+            onBack={() => window.location.assign(`/eventos/${event.slug}`)}
           />
         )}
 
         {step === 2 && data && (
-          <Step2Payment
-            methods={paymentMethods}
-            totalUsd={totalUsd}
+          <Step2Consumption
+            products={consumptionProducts}
+            quantity={data.quantity}
             exchangeRate={exchangeRate}
-            accessToken={createdOrder?.access_token}
+            ticketPriceUsd={ticketType?.price_usd ?? 0}
+            eventName={event.name}
             onNext={handleStep2Next}
             onBack={() => setStep(1)}
           />
         )}
 
-        {step === 3 && createdOrder && paymentMethod && (
-          <Step3Proof
+        {step === 3 && createdOrder && (
+          <Step3Payment
+            methods={paymentMethods}
+            totalUsd={createdOrder.total_usd}
+            totalBs={createdOrder.total_bs}
+            exchangeRate={exchangeRate}
             accessToken={createdOrder.access_token}
-            paymentMethod={paymentMethod}
-            totalBs={totalBs}
+            cartItems={cartItems}
             onNext={handleStep3Next}
             onBack={() => setStep(2)}
           />
