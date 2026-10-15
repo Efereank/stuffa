@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import StepProgress from './StepProgress';
 import Step1Data, { type Step1Data as Step1DataShape } from './Step1Data';
@@ -36,7 +35,6 @@ export default function PurchaseFlow({
   exchangeRate,
   consumptionProducts,
 }: PurchaseFlowProps) {
-  const router = useRouter();
   const [step, setStep] = useState(1);
   const [data, setData] = useState<Step1DataShape | null>(null);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -166,7 +164,7 @@ export default function PurchaseFlow({
             event={event}
             initialData={data ?? undefined}
             onNext={handleStep1Submit}
-            onBack={() => router.push(`/eventos/${event.slug}`)}
+            onBack={() => window.location.assign(`/eventos/${event.slug}`)}
           />
         )}
 
