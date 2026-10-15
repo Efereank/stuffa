@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
-export const revalidate = 60;
+// 👈 ESTA LÍNEA ES LA CLAVE
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
