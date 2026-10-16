@@ -38,7 +38,7 @@ export default function Step2Consumption({
   onBack,
 }: Step2ConsumptionProps) {
   const [cart, setCart] = useState<Record<string, number>>({});
-  const [filter, setFilter] = useState<FilterKey>('all');
+  const [filter, setFilter] = useState<FilterKey>('recommended');
   const [search, setSearch] = useState('');
 
   // Filtrado de productos
