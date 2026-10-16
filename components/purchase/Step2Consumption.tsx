@@ -5,8 +5,6 @@ import { cn, formatBs, formatCurrency } from '@/lib/utils';
 import Step2ProductCard from './Step2ProductCard';
 import type { ConsumptionCategory, ConsumptionProduct } from '@/lib/types';
 
-const MIN_CONSUMPTION_USD_PER_PERSON = 10;
-
 interface Step2ConsumptionProps {
   products: ConsumptionProduct[];
   quantity: number;
@@ -17,12 +15,12 @@ interface Step2ConsumptionProps {
   onBack: () => void;
 }
 
-type FilterKey = 'recommended' | 'all' | ConsumptionCategory;
+type FilterKey = 'all' | 'recommended' | ConsumptionCategory;
 
 const FILTERS: { key: FilterKey; label: string }[] = [
-    { key: 'recommended', label: ' Recomendados' },
-    { key: 'all', label: ' todos' },
-    { key: 'combos', label: 'Combos' },
+  { key: 'all', label: 'Todos' },
+  { key: 'recommended', label: '⭐ Recomendados' },
+  { key: 'combos', label: 'Combos' },
   { key: 'licores', label: 'Licores' },
   { key: 'cervezas', label: 'Cervezas' },
   { key: 'shots', label: 'Cocteles' },
@@ -40,9 +38,8 @@ export default function Step2Consumption({
   onBack,
 }: Step2ConsumptionProps) {
   const [cart, setCart] = useState<Record<string, number>>({});
-  const [filter, setFilter] = useState<FilterKey>('recommended');
+  const [filter, setFilter] = useState<FilterKey>('all');
   const [search, setSearch] = useState('');
-  const [error, setError] = useState<string | null>(null);
 
   // Filtrado de productos
   const filteredProducts = useMemo(() => {
@@ -90,10 +87,6 @@ export default function Step2Consumption({
     return { items, consumptionTotal, itemsCount };
   }, [cart, products]);
 
-  const minimumRequired = MIN_CONSUMPTION_USD_PER_PERSON * quantity;
-  const minimumMet = consumptionTotal >= minimumRequired;
-  const missing = Math.max(0, minimumRequired - consumptionTotal);
-
   const ticketSubtotal = ticketPriceUsd * quantity;
   const totalUsd = ticketSubtotal + consumptionTotal;
   const totalBs = totalUsd * exchangeRate;
@@ -108,25 +101,11 @@ export default function Step2Consumption({
       }
       return next;
     });
-    setError(null);
   }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
-
-    if (items.length === 0) {
-      setError('Agrega al menos un producto para continuar.');
-      return;
-    }
-
-    if (!minimumMet) {
-      setError(
-        `Faltan ${formatCurrency(missing)} para alcanzar el consumo mínimo.`,
-      );
-      return;
-    }
-
+    // 🎯 Consumo OPCIONAL: se puede continuar con o sin items
     onNext(items);
   }
 
@@ -138,16 +117,10 @@ export default function Step2Consumption({
           Elige tu consumo
         </h2>
         <p className="mt-1 text-xs text-white/50 sm:text-sm">
-          En <b className="text-white">{eventName}</b> cada persona debe consumir
-          mínimo{' '}
-          <b className="text-red-400">
-            {formatCurrency(MIN_CONSUMPTION_USD_PER_PERSON)}
-          </b>
-          . Puedes agregar más productos si quieres.
+          En <b className="text-white">{eventName}</b> puedes agregar productos
+          si quieres. <b className="text-emerald-400">Es opcional.</b>
         </p>
       </div>
-
-
 
       {/* Búsqueda */}
       <div>
@@ -263,12 +236,6 @@ export default function Step2Consumption({
         </div>
       </div>
 
-      {error && (
-        <p className="rounded-lg border border-red-500/40 bg-red-950/30 px-4 py-3 text-sm text-red-300">
-          {error}
-        </p>
-      )}
-
       {/* Acciones */}
       <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-between">
         <button
@@ -280,13 +247,7 @@ export default function Step2Consumption({
         </button>
         <button
           type="submit"
-          disabled={!minimumMet || items.length === 0}
-          className={cn(
-            'min-h-[52px] rounded-xl px-6 py-3.5 text-sm font-black uppercase tracking-wider transition',
-            minimumMet && items.length > 0
-              ? 'bg-gradient-to-r from-red-700 via-red-600 to-red-500 text-white shadow-lg shadow-red-900/40 hover:from-red-600 hover:to-red-500 active:scale-[0.98]'
-              : 'cursor-not-allowed bg-white/5 text-white/30',
-          )}
+          className="min-h-[52px] rounded-xl bg-gradient-to-r from-red-700 via-red-600 to-red-500 px-6 py-3.5 text-sm font-black uppercase tracking-wider text-white shadow-lg shadow-red-900/40 transition hover:from-red-600 hover:to-red-500 active:scale-[0.98]"
         >
           Continuar al pago →
         </button>
