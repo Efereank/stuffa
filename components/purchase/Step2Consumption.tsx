@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { cn, formatBs, formatCurrency } from '@/lib/utils';
 import Step2ProductCard from './Step2ProductCard';
+import OrderTimer from './OrderTimer';
 import type { ConsumptionCategory, ConsumptionProduct } from '@/lib/types';
 
 interface Step2ConsumptionProps {
@@ -11,6 +12,8 @@ interface Step2ConsumptionProps {
   exchangeRate: number;
   ticketPriceUsd: number;
   eventName: string;
+  startTime: number;
+  onExpire: () => void;
   onNext: (items: { product_id: string; quantity: number }[]) => void;
   onBack: () => void;
 }
@@ -34,6 +37,8 @@ export default function Step2Consumption({
   exchangeRate,
   ticketPriceUsd,
   eventName,
+  startTime,
+  onExpire,
   onNext,
   onBack,
 }: Step2ConsumptionProps) {
@@ -41,16 +46,13 @@ export default function Step2Consumption({
   const [filter, setFilter] = useState<FilterKey>('recommended');
   const [search, setSearch] = useState('');
 
-  // Filtrado de productos
   const filteredProducts = useMemo(() => {
     let list = products;
-
     if (filter === 'recommended') {
       list = list.filter((p) => p.is_recommended);
     } else if (filter !== 'all') {
       list = list.filter((p) => p.category === filter);
     }
-
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       list = list.filter(
@@ -59,21 +61,16 @@ export default function Step2Consumption({
           (p.description?.toLowerCase().includes(q) ?? false),
       );
     }
-
     return list;
   }, [products, filter, search]);
 
-  // Totales
   const { items, consumptionTotal, itemsCount } = useMemo(() => {
     const items = Object.entries(cart)
       .filter(([, qty]) => qty > 0)
       .map(([productId, qty]) => {
         const product = products.find((p) => p.id === productId);
         if (!product) return null;
-        return {
-          product_id: product.id,
-          quantity: qty,
-        };
+        return { product_id: product.id, quantity: qty };
       })
       .filter((x): x is { product_id: string; quantity: number } => x !== null);
 
@@ -94,24 +91,19 @@ export default function Step2Consumption({
   function setProductQty(productId: string, qty: number) {
     setCart((prev) => {
       const next = { ...prev };
-      if (qty <= 0) {
-        delete next[productId];
-      } else {
-        next[productId] = qty;
-      }
+      if (qty <= 0) delete next[productId];
+      else next[productId] = qty;
       return next;
     });
   }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    // 🎯 Consumo OPCIONAL: se puede continuar con o sin items
     onNext(items);
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      {/* Header */}
       <div>
         <h2 className="text-xl font-black text-white sm:text-2xl">
           Elige tu consumo
@@ -122,7 +114,6 @@ export default function Step2Consumption({
         </p>
       </div>
 
-      {/* Búsqueda */}
       <div>
         <input
           type="search"
@@ -133,7 +124,6 @@ export default function Step2Consumption({
         />
       </div>
 
-      {/* Filtros */}
       <div className="-mx-1 overflow-x-auto px-1 no-scrollbar">
         <div className="flex gap-1.5">
           {FILTERS.map((f) => (
@@ -154,7 +144,6 @@ export default function Step2Consumption({
         </div>
       </div>
 
-      {/* Grid de productos */}
       {filteredProducts.length === 0 ? (
         <div className="rounded-2xl border border-red-950/60 bg-black/40 px-6 py-12 text-center">
           <p className="text-3xl">🔍</p>
@@ -184,7 +173,6 @@ export default function Step2Consumption({
           Resumen
         </p>
 
-        {/* Items agregados */}
         {itemsCount > 0 ? (
           <div className="mb-3 max-h-40 space-y-2 overflow-y-auto border-b border-red-950/60 pb-3">
             {items.map((item) => {
@@ -211,32 +199,38 @@ export default function Step2Consumption({
           </p>
         )}
 
-        {/* Totales */}
-        <div className="space-y-1.5 text-sm">
-          <Row
-            label={`Boletos (${quantity} × ${formatCurrency(ticketPriceUsd)})`}
-            value={formatCurrency(ticketSubtotal)}
-          />
-          <Row
-            label={`Consumo (${itemsCount} ${itemsCount === 1 ? 'producto' : 'productos'})`}
-            value={formatCurrency(consumptionTotal)}
-          />
-          <div className="mt-2 flex items-center justify-between border-t border-red-950/60 pt-2">
-            <span className="text-xs uppercase tracking-wide text-white/60">
-              Total USD
-            </span>
-            <span className="text-lg font-black text-red-400">
-              {formatCurrency(totalUsd)}
-            </span>
+        {/* Totales y Reloj */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex-1 space-y-1.5 text-sm">
+            <Row
+              label={`Boletos (${quantity} × ${formatCurrency(ticketPriceUsd)})`}
+              value={formatCurrency(ticketSubtotal)}
+            />
+            <Row
+              label={`Consumo (${itemsCount} ${itemsCount === 1 ? 'producto' : 'productos'})`}
+              value={formatCurrency(consumptionTotal)}
+            />
+            <div className="mt-2 flex items-center justify-between border-t border-red-950/60 pt-2">
+              <span className="text-xs uppercase tracking-wide text-white/60">
+                Total USD
+              </span>
+              <span className="text-lg font-black text-red-400">
+                {formatCurrency(totalUsd)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-white/50">
+              <span className="text-xs">Total Bs.</span>
+              <span className="font-mono text-sm">{formatBs(totalBs)}</span>
+            </div>
           </div>
-          <div className="flex items-center justify-between text-white/50">
-            <span className="text-xs">Total Bs.</span>
-            <span className="font-mono text-sm">{formatBs(totalBs)}</span>
+          
+          {/* 🎯 EL RELOJ AL LADO DE LOS TOTALES */}
+          <div className="sm:mb-1">
+            <OrderTimer startTime={startTime} onExpire={onExpire} />
           </div>
         </div>
       </div>
 
-      {/* Acciones */}
       <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-between">
         <button
           type="button"

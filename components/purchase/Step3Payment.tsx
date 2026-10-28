@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { cn, formatBs, formatCurrency } from '@/lib/utils';
+import OrderTimer from './OrderTimer';
 import type { PaymentConfig, PaymentMethod } from '@/lib/types';
 
 interface Step3PaymentProps {
@@ -13,6 +14,8 @@ interface Step3PaymentProps {
   exchangeRate: number;
   accessToken: string;
   cartItems?: { product_id: string; quantity: number }[];
+  startTime: number;
+  onExpire: () => void;
   onNext: (method: PaymentMethod) => void;
   onBack: () => void;
 }
@@ -45,6 +48,8 @@ export default function Step3Payment({
   exchangeRate,
   accessToken,
   cartItems,
+  startTime,
+  onExpire,
   onNext,
   onBack,
 }: Step3PaymentProps) {
@@ -188,34 +193,41 @@ export default function Step3Payment({
         <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-red-500">
           Resumen
         </p>
-        <div className="space-y-2 text-sm">
-          {itemsCount > 0 && (
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex-1 space-y-2 text-sm">
+            {itemsCount > 0 && (
+              <div className="flex justify-between text-white/70">
+                <span>Consumo incluido</span>
+                <span className="font-bold text-white">
+                  {itemsCount} {itemsCount === 1 ? 'producto' : 'productos'}
+                </span>
+              </div>
+            )}
             <div className="flex justify-between text-white/70">
-              <span>Consumo incluido</span>
+              <span>Total USD</span>
               <span className="font-bold text-white">
-                {itemsCount} {itemsCount === 1 ? 'producto' : 'productos'}
+                {formatCurrency(totalUsd)}
               </span>
             </div>
-          )}
-          <div className="flex justify-between text-white/70">
-            <span>Total USD</span>
-            <span className="font-bold text-white">
-              {formatCurrency(totalUsd)}
-            </span>
+            <div className="flex justify-between text-white/70">
+              <span>Tasa VES</span>
+              <span className="font-mono text-white/90">
+                Bs. {exchangeRate.toFixed(2)}
+              </span>
+            </div>
+            <div className="mt-2 flex justify-between border-t border-red-950/60 pt-2">
+              <span className="text-xs uppercase tracking-wide text-white/60">
+                Total en bolívares
+              </span>
+              <span className="text-lg font-black text-red-400">
+                {formatBs(totalBs)}
+              </span>
+            </div>
           </div>
-          <div className="flex justify-between text-white/70">
-            <span>Tasa VES</span>
-            <span className="font-mono text-white/90">
-              Bs. {exchangeRate.toFixed(2)}
-            </span>
-          </div>
-          <div className="mt-2 flex justify-between border-t border-red-950/60 pt-2">
-            <span className="text-xs uppercase tracking-wide text-white/60">
-              Total en bolívares
-            </span>
-            <span className="text-lg font-black text-red-400">
-              {formatBs(totalBs)}
-            </span>
+          
+          {/* 🎯 EL RELOJ AL LADO DE LOS TOTALES */}
+          <div className="sm:mb-1">
+            <OrderTimer startTime={startTime} onExpire={onExpire} />
           </div>
         </div>
       </div>
@@ -264,7 +276,7 @@ export default function Step3Payment({
         </div>
       </div>
 
-      {/* 2. Datos de pago (solo si hay método seleccionado) */}
+      {/* 2. Datos de pago */}
       {selectedConfig && (
         <div className="rounded-2xl border border-red-500/30 bg-gradient-to-br from-red-950/30 to-black p-4">
           <p className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-red-400">
@@ -315,7 +327,7 @@ export default function Step3Payment({
         </div>
       )}
 
-      {/* 3. Comprobante (solo si hay método seleccionado) */}
+      {/* 3. Comprobante */}
       {selectedConfig && (
         <div className="space-y-4 rounded-2xl border border-red-950/60 bg-black/40 p-4">
           <p className="text-[10px] font-bold uppercase tracking-widest text-red-400">

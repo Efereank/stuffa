@@ -43,72 +43,48 @@ export default function PurchaseFlow({
   const [finalOrder, setFinalOrder] = useState<OrderDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  
+  const [startTime, setStartTime] = useState<number>(0);
+  const [isExpired, setIsExpired] = useState(false);
 
-  // Scroll to top al cambiar de paso
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [step]);
 
   const ticketType = event.ticket_types[0];
 
-  // ============================================================
-  // STEP 1 → STEP 2: guardar datos y pasar a consumo
-  // ============================================================
   async function handleStep1Submit(formData: Step1DataShape) {
     setError(null);
+    setIsExpired(false);
+    setLoading(true);
 
-    // Reiniciar el consumo crea una nueva orden, así que cancelar la anterior.
     if (createdOrder) {
-      const { error: cancelError } = await createClient()
+      await createClient()
         .from('orders')
         .update({ status: 'cancelled' })
         .eq('id', createdOrder.id)
         .eq('status', 'pending');
-
-      if (cancelError) {
-        setError('No se pudo cancelar la orden anterior. Intenta de nuevo.');
-        return;
-      }
-
       setCreatedOrder(null);
-      setCartItems([]);
     }
 
     setData(formData);
-    setStep(2);
-  }
-
-  // ============================================================
-  // STEP 2 → STEP 3: crear la orden con los items elegidos
-  // ============================================================
-  async function handleStep2Next(items: CartItem[]) {
-    setError(null);
-    setLoading(true);
-
-    if (!data) {
-      setError('No se pudieron recuperar los datos de la compra.');
-      setLoading(false);
-      return;
-    }
-
-    setCartItems(items);
 
     const supabase = createClient();
     const { data: order, error: rpcError } = await supabase
       .rpc('create_order', {
         p_event_slug: event.slug,
         p_ticket_type_id: ticketType.id,
-        p_customer_name: data.name,
-        p_customer_cedula: data.cedula,
-        p_customer_email: data.email || null,
-        p_customer_phone: data.phone,
-        p_customer_age: data.age,
-        p_customer_gender: data.gender,
-        p_quantity: data.quantity,
-        p_men_count: data.menCount,
-        p_women_count: data.womenCount,
+        p_customer_name: formData.name,
+        p_customer_cedula: formData.cedula,
+        p_customer_email: formData.email || null,
+        p_customer_phone: formData.phone,
+        p_customer_age: formData.age,
+        p_customer_gender: formData.gender,
+        p_quantity: formData.quantity,
+        p_men_count: formData.menCount,
+        p_women_count: formData.womenCount,
         p_exchange_rate: exchangeRate,
-        p_consumption_items: items,
+        p_consumption_items: [], 
       })
       .single<CreatedOrder>();
 
@@ -119,16 +95,68 @@ export default function PurchaseFlow({
       return;
     }
 
+    setStartTime(Date.now()); 
     setCreatedOrder(order);
+    setStep(2);
+  }
+
+  async function handleStep2Next(items: CartItem[]) {
+    if (isExpired) {
+      setError('El tiempo expiró. Vuelve a empezar.');
+      return;
+    }
+
+    setError(null);
+    setLoading(true);
+
+    if (!createdOrder) {
+      setError('No se pudo recuperar la orden.');
+      setLoading(false);
+      return;
+    }
+
+    setCartItems(items);
+
+    const supabase = createClient();
+    const { error: rpcError } = await supabase.rpc('update_order_consumption', {
+      p_access_token: createdOrder.access_token,
+      p_consumption_items: items,
+    });
+
+    if (rpcError) {
+      setLoading(false);
+      setError(translateRpcError(rpcError?.message ?? ''));
+      return;
+    }
+
+    const { data: updatedOrder } = await supabase
+      .rpc('get_order_by_access_token', { p_token: createdOrder.access_token })
+      .single<OrderDetail>();
+
+    setLoading(false);
+
+    if (!updatedOrder) {
+      setError('Error al actualizar los totales.');
+      return;
+    }
+
+    setCreatedOrder((prev) => ({
+      ...prev!,
+      total_usd: updatedOrder.total_usd,
+      total_bs: updatedOrder.total_bs ?? prev!.total_bs,
+      consumption_total_usd: updatedOrder.consumption_total_usd,
+    }));
+
     setStep(3);
   }
 
-  // ============================================================
-  // STEP 3 → STEP 4: el usuario ya pagó y subió comprobante
-  // ============================================================
   async function handleStep3Next(method: PaymentMethod) {
-    setPaymentMethod(method);
+    if (isExpired) {
+      setError('El tiempo expiró. Vuelve a empezar.');
+      return;
+    }
 
+    setPaymentMethod(method);
     if (!createdOrder) return;
     setLoading(true);
 
@@ -146,6 +174,23 @@ export default function PurchaseFlow({
 
     setFinalOrder(order);
     setStep(4);
+  }
+
+  function handleExpire() {
+    setIsExpired(true);
+    setError('El tiempo para completar esta compra ha expirado. Por favor, vuelve a empezar.');
+    
+    setTimeout(() => {
+      setStep(1);
+      setCreatedOrder(null);
+      setData(null);
+      setCartItems([]);
+      setPaymentMethod(null);
+      setFinalOrder(null);
+      setError(null);
+      setIsExpired(false);
+      setStartTime(0);
+    }, 3000);
   }
 
   return (
@@ -182,6 +227,8 @@ export default function PurchaseFlow({
             exchangeRate={exchangeRate}
             ticketPriceUsd={ticketType?.price_usd ?? 0}
             eventName={event.name}
+            startTime={startTime}         
+            onExpire={handleExpire}       
             onNext={handleStep2Next}
             onBack={() => setStep(1)}
           />
@@ -190,11 +237,13 @@ export default function PurchaseFlow({
         {step === 3 && createdOrder && (
           <Step3Payment
             methods={paymentMethods}
-            totalUsd={createdOrder.total_usd}
+            totalUsd={createdOrder.total_usd} 
             totalBs={createdOrder.total_bs}
             exchangeRate={exchangeRate}
             accessToken={createdOrder.access_token}
             cartItems={cartItems}
+            startTime={startTime}         
+            onExpire={handleExpire}       
             onNext={handleStep3Next}
             onBack={() => setStep(2)}
           />
