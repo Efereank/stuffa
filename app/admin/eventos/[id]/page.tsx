@@ -42,8 +42,8 @@ export default async function AdminEventDetailPage({
   const uploaded = orders.filter((o) => o.status === 'payment_uploaded').length;
   const rejected = orders.filter((o) => o.status === 'rejected').length;
 
-  // 🎯 ESTADOS QUE CUENTAN COMO VENTA (Agregamos pending y payment_uploaded para que cuadre con la web)
-  const PAID_STATUSES = ['verified', 'checked_in', 'completed', 'pending', 'payment_uploaded'];
+  // 🎯 SOLO LAS PAGADAS CUENTAN COMO VENTA
+  const PAID_STATUSES = ['verified', 'checked_in', 'completed'];
 
   const ticketsSold = orders
     .filter((o) => PAID_STATUSES.includes(o.status))
