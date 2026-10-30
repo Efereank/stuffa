@@ -1,42 +1,29 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Scanner } from '@yudiel/react-qr-scanner';
 import { createClient } from '@/lib/supabase/client';
 import CheckInResult, { type ScanResult } from './CheckInResult';
 import { cn } from '@/lib/utils';
 
 interface CheckInApiResponse {
-  status:
-    | 'ok'
-    | 'already_checked_in'
-    | 'not_verified'
-    | 'not_found';
+  status: 'ok' | 'already_checked_in' | 'not_verified' | 'not_found';
   code?: string;
   customer_name?: string;
   quantity?: number;
   event_name?: string;
   checked_in_at?: string;
   current_status?: string;
+  consumption?: { name: string; quantity: number }[];
 }
 
-/** Extrae el token QR de un texto que puede ser URL o UUID */
 function extractQrToken(raw: string): string {
   const trimmed = raw.trim();
   if (!trimmed) return '';
-
-  // URL tipo https://dominio.com/orden/{uuid}
-  const urlMatch = trimmed.match(
-    /orden\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i,
-  );
+  const urlMatch = trimmed.match(/orden\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
   if (urlMatch?.[1]) return urlMatch[1];
-
-  // UUID directo
-  const uuidMatch = trimmed.match(
-    /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i,
-  );
+  const uuidMatch = trimmed.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
   if (uuidMatch) return uuidMatch[0];
-
   return trimmed;
 }
 
@@ -49,7 +36,7 @@ export default function CheckInScanner() {
   const handleScan = useCallback(
     async (detected: { rawValue: string }[]) => {
       const value = detected[0]?.rawValue;
-      if (!value || processing || paused) return;
+      if (!value || processing || paused || lastResult) return; // 👈 Si lastResult tiene algo, no escanea
 
       const token = extractQrToken(value);
       if (!token) return;
@@ -63,15 +50,8 @@ export default function CheckInScanner() {
         .single<CheckInApiResponse>();
 
       if (error || !data) {
-        setLastResult({
-          kind: 'error',
-          message: 'Error al escanear. Intenta de nuevo.',
-        });
-        setStats((s) => ({
-          ...s,
-          scans: s.scans + 1,
-          errors: s.errors + 1,
-        }));
+        setLastResult({ kind: 'error', message: 'Error al escanear. Intenta de nuevo.' });
+        setStats((s) => ({ ...s, scans: s.scans + 1, errors: s.errors + 1 }));
       } else {
         switch (data.status) {
           case 'ok':
@@ -82,12 +62,9 @@ export default function CheckInScanner() {
               customerName: data.customer_name ?? '',
               quantity: data.quantity ?? 0,
               eventName: data.event_name ?? '',
+              consumption: data.consumption,
             });
-            setStats((s) => ({
-              ...s,
-              scans: s.scans + 1,
-              ok: s.ok + 1,
-            }));
+            setStats((s) => ({ ...s, scans: s.scans + 1, ok: s.ok + 1 }));
             break;
 
           case 'already_checked_in':
@@ -99,18 +76,11 @@ export default function CheckInScanner() {
               quantity: data.quantity ?? 0,
               eventName: data.event_name ?? '',
               extra: data.checked_in_at
-                ? `Check-in previo: ${new Date(data.checked_in_at).toLocaleTimeString('es-VE', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: false,
-                  })}`
+                ? `Check-in previo: ${new Date(data.checked_in_at).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', hour12: false })}`
                 : undefined,
+              consumption: data.consumption,
             });
-            setStats((s) => ({
-              ...s,
-              scans: s.scans + 1,
-              warnings: s.warnings + 1,
-            }));
+            setStats((s) => ({ ...s, scans: s.scans + 1, warnings: s.warnings + 1 }));
             break;
 
           case 'not_verified':
@@ -121,11 +91,7 @@ export default function CheckInScanner() {
               customerName: data.customer_name ?? '',
               extra: `Estado actual: ${data.current_status ?? 'desconocido'}`,
             });
-            setStats((s) => ({
-              ...s,
-              scans: s.scans + 1,
-              errors: s.errors + 1,
-            }));
+            setStats((s) => ({ ...s, scans: s.scans + 1, errors: s.errors + 1 }));
             break;
 
           case 'not_found':
@@ -134,30 +100,24 @@ export default function CheckInScanner() {
               message: 'QR no reconocido',
               extra: 'Este QR no corresponde a ninguna orden.',
             });
-            setStats((s) => ({
-              ...s,
-              scans: s.scans + 1,
-              errors: s.errors + 1,
-            }));
+            setStats((s) => ({ ...s, scans: s.scans + 1, errors: s.errors + 1 }));
             break;
         }
       }
 
       setProcessing(false);
-
-      // Cooldown: 3s para éxitos/avisos, 2s para errores
-      const wait = data?.status === 'ok' || data?.status === 'already_checked_in' ? 3000 : 2000;
-      window.setTimeout(() => {
-        setPaused(false);
-        setLastResult(null);
-      }, wait);
+      // 🎯 Ya NO hay setTimeout aquí. La ventana se queda abierta hasta que toquen "Aceptar"
     },
-    [processing, paused],
+    [processing, paused, lastResult],
   );
+
+  const handleCloseResult = () => {
+    setLastResult(null);
+    setPaused(false);
+  };
 
   return (
     <div className="space-y-4">
-      {/* Stats */}
       <div className="grid grid-cols-4 gap-2">
         <StatBox label="Escaneos" value={stats.scans} tone="neutral" />
         <StatBox label="OK" value={stats.ok} tone="emerald" />
@@ -165,7 +125,6 @@ export default function CheckInScanner() {
         <StatBox label="Errores" value={stats.errors} tone="red" />
       </div>
 
-      {/* Scanner */}
       <div className="relative overflow-hidden rounded-2xl border border-red-950/60 bg-black shadow-2xl">
         <div className="relative aspect-square w-full sm:aspect-[4/3]">
           <Scanner
@@ -173,28 +132,20 @@ export default function CheckInScanner() {
             onError={(err) => console.error('[scanner]', err)}
             paused={paused}
             constraints={{ facingMode: 'environment' }}
-            styles={{
-              container: { width: '100%', height: '100%' },
-              video: { objectFit: 'cover' },
-            }}
+            styles={{ container: { width: '100%', height: '100%' }, video: { objectFit: 'cover' } }}
           />
 
-          {/* Overlay cuando procesa */}
           {processing && (
             <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-black/60 backdrop-blur-sm">
               <div className="flex flex-col items-center gap-3">
                 <span className="h-12 w-12 animate-spin rounded-full border-4 border-red-500 border-t-transparent" />
-                <span className="text-xs font-bold uppercase tracking-widest text-white/80">
-                  Procesando…
-                </span>
+                <span className="text-xs font-bold uppercase tracking-widest text-white/80">Procesando…</span>
               </div>
             </div>
           )}
 
-          {/* Marco visual (no bloquea) */}
           <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
             <div className="relative h-2/3 w-2/3 rounded-3xl border-2 border-red-500/40">
-              {/* Esquinas */}
               <Corner className="left-0 top-0 border-l-4 border-t-4 rounded-tl-3xl" />
               <Corner className="right-0 top-0 border-r-4 border-t-4 rounded-tr-3xl" />
               <Corner className="left-0 bottom-0 border-l-4 border-b-4 rounded-bl-3xl" />
@@ -203,57 +154,34 @@ export default function CheckInScanner() {
           </div>
         </div>
 
-        {/* Instrucciones */}
         <div className="border-t border-red-950/60 bg-black/80 px-4 py-3 text-center">
           <p className="text-xs text-white/60">
-            {paused
-              ? 'Esperando para el próximo escaneo…'
-              : 'Apunta la cámara al código QR del cliente'}
+            {paused ? 'Esperando acción del portero…' : 'Apunta la cámara al código QR del cliente'}
           </p>
         </div>
       </div>
 
-      {/* Último resultado */}
-      {lastResult && <CheckInResult result={lastResult} />}
+      {/* 🎯 LE PASAMOS LA FUNCIÓN ONCLOSE AL RESULTADO */}
+      {lastResult && (
+        <CheckInResult 
+          result={lastResult} 
+          onClose={handleCloseResult} 
+        />
+      )}
     </div>
   );
 }
 
 function Corner({ className }: { className: string }) {
-  return (
-    <span
-      className={cn(
-        'absolute h-8 w-8 border-red-500',
-        className,
-      )}
-    />
-  );
+  return <span className={cn('absolute h-8 w-8 border-red-500', className)} />;
 }
 
-function StatBox({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: number;
-  tone: 'neutral' | 'emerald' | 'amber' | 'red';
-}) {
-  const tones = {
-    neutral: 'text-white',
-    emerald: 'text-emerald-400',
-    amber: 'text-amber-400',
-    red: 'text-red-400',
-  } as const;
-
+function StatBox({ label, value, tone }: { label: string; value: number; tone: 'neutral' | 'emerald' | 'amber' | 'red' }) {
+  const tones = { neutral: 'text-white', emerald: 'text-emerald-400', amber: 'text-amber-400', red: 'text-red-400' } as const;
   return (
     <div className="rounded-xl border border-red-950/60 bg-black/40 p-2.5 text-center sm:p-3">
-      <p className="text-[9px] uppercase tracking-wide text-white/40 sm:text-[10px]">
-        {label}
-      </p>
-      <p className={cn('mt-1 text-lg font-black sm:text-xl', tones[tone])}>
-        {value}
-      </p>
+      <p className="text-[9px] uppercase tracking-wide text-white/40 sm:text-[10px]">{label}</p>
+      <p className={cn('mt-1 text-lg font-black sm:text-xl', tones[tone])}>{value}</p>
     </div>
   );
 }
